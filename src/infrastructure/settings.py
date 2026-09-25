@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,3 +11,5 @@ class Settings(BaseSettings):
     max_pages: int = Field(default=30, ge=1, le=100)
     min_dpi: int = Field(default=150, ge=72, le=600)
     min_ocr_confidence: float = Field(default=0.65, ge=0, le=1)
+    reviewer_token: SecretStr = SecretStr("")
+    reviewer_id: str = ""

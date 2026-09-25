@@ -101,6 +101,11 @@ def test_unknown_class_is_not_invented(settings):
 
 def test_limits_and_missing_id(settings):
     with TestClient(create_app(settings)) as client:
+        home = client.get("/")
+        assert home.status_code == 200
+        assert "Expedientes Municipales" in home.text
+        assert client.get("/assets/styles.css").status_code == 200
+        assert client.get("/assets/app.js").status_code == 200
         assert send(client, b"%PDF-" + b"x" * (1024 * 1024)).status_code == 413
         assert client.get(f"/api/expedientes/{uuid4()}").status_code == 404
         assert client.get("/api/expedientes/not-a-uuid").status_code == 422

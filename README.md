@@ -1,16 +1,18 @@
-# Backend PMV1 HU01
+# Backend de expedientes - Municipalidad Provincial de Huancayo
 
-API Python y FastAPI para cargar un expediente PDF, extraer texto, clasificar páginas y guardar resultados. Arquitectura hexagonal: dominio independiente, aplicación coordinadora y adaptadores de infraestructura. No incluye frontend ni validación normativa del TUPA.
+API Python/FastAPI con arquitectura hexagonal para extracción documental y un flujo académico de Huancayo. Se conserva la interfaz local existente sin ampliar el frontend. Esta iteración añade catálogo TUPA piloto, revisión documental, borradores versionados, auditoría, bandeja local y privacidad sin envíos externos. No emite actos administrativos ni dispone de modelos predictivos entrenados.
+
+**Guía actual de las siete historias, fuentes, límites y pruebas: [docs/HUANCAYO.md](docs/HUANCAYO.md).** Consulte también `GET /api/capacidades`. Las instrucciones y limitaciones HU01 que siguen describen el módulo original de extracción.
 
 ## Ejecutar en esta computadora
 
-Abre esta carpeta en VS Code. El entorno `.venv` contiene las dependencias instaladas. En la terminal PowerShell, desde esta carpeta:
+Abre esta carpeta en VS Code. Si todavía no existe `.venv` en esta copia, sigue primero la instalación de la siguiente sección. En la terminal PowerShell, desde esta carpeta:
 
 ```powershell
 .\.venv\Scripts\python.exe -m uvicorn src.infrastructure.main:create_app --factory --host 127.0.0.1 --port 8000
 ```
 
-Abre http://127.0.0.1:8000/docs. En `POST /api/expedientes`, pulsa **Try it out**, selecciona un PDF en `archivo` y pulsa **Execute**. Copia el `id` devuelto para consultar `GET /api/expedientes/{dossier_id}`. Ctrl+C detiene el servidor. Los resultados permanecen después de reiniciar.
+Abre http://127.0.0.1:8000 para usar la interfaz gráfica. Desde allí puedes cargar un PDF, visualizar los documentos clasificados y consultar un expediente por su identificador. La documentación Swagger continúa disponible en http://127.0.0.1:8000/docs. Ctrl+C detiene el servidor. Los resultados permanecen después de reiniciar.
 
 No es necesario activar el entorno virtual ni cambiar la política de ejecución de PowerShell. En VS Code instala la extensión oficial Python y selecciona `.venv\Scripts\python.exe` como intérprete. F5 usa la configuración incluida si está instalada la extensión Python Debugger.
 
@@ -51,6 +53,7 @@ Controlador FastAPI -> Caso de uso -> Entidades, reglas y puertos
 - `src/domain/classification.py`: reglas de clasificación y extracción de campos.
 - `src/application/useCases/`: procesar y consultar expediente mediante puertos.
 - `src/infrastructure/adapters/input/controllers/`: HTTP, archivos recibidos, serialización y errores.
+- `src/infrastructure/adapters/input/web/`: interfaz gráfica HTML, CSS y JavaScript servida en `/`.
 - `src/infrastructure/adapters/output`: OCR, base de datos y almacenamiento real.
 - `src/infrastructure/main.py`: raíz de composición; conecta implementaciones con casos de uso.
 
@@ -100,7 +103,7 @@ El DPI se calcula a partir de dimensiones de imagen y tamaño de colocación en 
 
 Límites predeterminados: 20 MB y 30 páginas. El procesamiento es síncrono y puede tardar en CPU; el frontend debe mostrar espera y no reenviar automáticamente. Si falla una página, no se persisten documentos parciales como exitosos. Se conserva original y estado del fallo para trazabilidad. Si el proceso del servidor se interrumpe, un expediente puede quedar en `PROCESANDO`; esta versión no incorpora cola ni recuperación automática.
 
-El backend incluye IA local. Una API externa independiente, si el docente la exige expresamente, todavía debe conectarse mediante el puerto `DocumentReader`; no se presenta el OCR local como servicio externo. Prototipo de desarrollo local sin autenticación: usar datos ficticios/anonimizados y mantener el servidor en 127.0.0.1. No está preparado para publicación municipal.
+El backend incluye OCR local; no se presenta como servicio externo. Cualquier futuro proveedor remoto necesita un puerto específico y un control de privacidad previo: no enviar originales mediante `DocumentReader` ni texto libre sin protección. Los endpoints originales de extracción siguen sin autenticación por usuario; el flujo municipal nuevo requiere token de evaluador. Usar datos ficticios y mantener el servidor en 127.0.0.1. No está preparado para publicación municipal.
 
 ## Pruebas
 
@@ -118,4 +121,4 @@ Los archivos aparecen en `data/ejemplos`. Los dos primeros deben procesarse; los
 
 Pruebas con PDFs sintéticos, lectura de PDF digital, OCR real sobre imagen escaneada, baja resolución, página vacía, clasificación desconocida, archivo corrupto, límites, consulta y persistencia al recrear la aplicación. Incluye prueba de dependencias para evitar imports de infraestructura/frameworks en dominio y aplicación. No equivalen a un benchmark con expedientes de la MPH. PostgreSQL requiere una instancia accesible para probarlo por separado.
 
-Verificación realizada el 17 de septiembre de 2026: 13 pruebas aprobadas en Windows con Python 3.12. También se comprobó el servidor Uvicorn real: `/docs` disponible, PDFs digital y escaneado con respuesta 201 y categorías FUT/DNI/PLANO; baja resolución y página vacía con respuesta 422; consultas posteriores coherentes. El comprobador `scripts/check_server.py` reproduce esta verificación, crea cuatro expedientes ficticios en la base configurada y detiene su propio servidor al terminar. La biblioteca de pruebas emitió dos advertencias de deprecación de dependencias, sin fallos.
+Verificación de esta iteración Huancayo (24 de septiembre de 2026): 47 pruebas aprobadas con Python 3.12, incluidas las pruebas OCR existentes, autenticación, reglas TUPA, versiones, persistencia, concurrencia y privacidad. Ejecutada también `python -m scripts.demo_huancayo` con PDF ficticio y base temporal. Las pruebas usaron el entorno instalado en `D:\Taller de proyectos\Backend\.venv`; esta copia no tenía entorno propio. Dos advertencias de deprecación de Starlette/AnyIO, sin fallos. No se ha reiniciado ni sustituido el servidor del usuario. El comprobador anterior `scripts/check_server.py` crea expedientes ficticios en la base configurada: para pruebas aisladas usar la nueva demo.

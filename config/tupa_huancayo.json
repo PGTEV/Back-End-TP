@@ -1,0 +1,54 @@
+{
+  "municipality": "Municipalidad Provincial de Huancayo",
+  "scope": "CATALOGO_PILOTO_3_PROCEDIMIENTOS",
+  "source_version": "TUPA 2025 - OM 790-MPH/CM; transcripción piloto revisada 2026-09-24",
+  "source_url": "https://cdn.www.gob.pe/uploads/document/file/8019739/1050892-texto-unico-de-procedimientos-administrativos-tupa-2025.pdf",
+  "source_sha256": "74d4305c6a6997c088409cc1951579cde5c5485b948a206683d31d01a1f83d53",
+  "publication_url": "https://www.gob.pe/institucion/munihuancayo/informes-publicaciones/1050892-texto-unico-de-procedimientos-administrativos-tupa",
+  "warning": "No es el TUPA completo ni certificación de vigencia normativa en 2026. Requisitos resumidos para prevalidación académica con revisión humana. Consultar páginas originales. No se cargan tasas ni beneficios temporales.",
+  "procedures": [
+    {
+      "code": "PA121121B0",
+      "name": "Modificación de zonificación o zonificación específica",
+      "department": "Sub Gerencia de Planes y Cooperación Técnica Internacional",
+      "published_days": 30,
+      "pdf_pages": [75, 76],
+      "requirements": [
+        {"id": "solicitud", "description": "Solicitud dirigida al alcalde.", "document_types": ["FUT"]},
+        {"id": "legitimidad", "description": "Acreditación de legitimidad: propiedad, resolución de representatividad o vigencia de poder."},
+        {"id": "planos", "description": "Planos que justifiquen el pedido.", "document_types": ["PLANO"]},
+        {"id": "propuesta", "description": "Propuesta de zonificación sustentada técnicamente, con análisis del impacto en predios vecinos."},
+        {"id": "pago", "description": "Pago administrativo; verificar su acreditación, no solo menciones al pago."}
+      ]
+    },
+    {
+      "code": "PA12115285",
+      "name": "Certificado de parámetros urbanísticos y edificatorios",
+      "department": "Gerencia de Desarrollo Urbano",
+      "published_days": 5,
+      "pdf_pages": [524],
+      "requirements": [
+        {"id": "solicitud", "description": "Solicitud dirigida al alcalde.", "document_types": ["FUT"]},
+        {"id": "identidad", "description": "Exhibición de DNI. No equivale a exigir una copia adjunta.", "document_types": ["DNI"]},
+        {"id": "plano_firmado", "description": "Plano original de ubicación y localización con firma de arquitecto o ingeniero civil habilitado; verificar firma y habilitación.", "document_types": ["PLANO"]},
+        {"id": "pago", "description": "Derecho de pago; verificar su acreditación."}
+      ]
+    },
+    {
+      "code": "PE1027344C1",
+      "name": "Licencia de funcionamiento para edificaciones calificadas con nivel de riesgo bajo (ITSE posterior)",
+      "department": "Gerencia de Promoción Económica y Turismo",
+      "published_days": 2,
+      "pdf_pages": [80, 81],
+      "requirements": [
+        {"id": "solicitud", "description": "Solicitud con carácter de declaración jurada, RUC y DNI/CE del solicitante o representante según corresponda. Revisar íntegramente el requisito 1 de la fuente."},
+        {"id": "representacion", "description": "Cuando corresponda: declaración de poder vigente con partida y asiento SUNARP, o carta poder simple firmada e identificación del poderdante, según requisito 2.", "conditional": true},
+        {"id": "seguridad", "description": "Declaración jurada de cumplimiento de condiciones de seguridad en la edificación."},
+        {"id": "salud", "description": "Para servicios de salud: declaración de título vigente y habilitación profesional.", "conditional": true},
+        {"id": "sectorial", "description": "Para actividades que lo requieran: declaración de autorización sectorial previa.", "conditional": true},
+        {"id": "patrimonio", "description": "Para inmueble declarado monumento: declaración de conservación de su estructura física.", "conditional": true},
+        {"id": "pago", "description": "Verificar el derecho de tramitación publicado; no se exige automáticamente una copia de recibo."}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Interfaz local para procesar expedientes municipales en PDF.">
+  <title>Expedientes Municipales</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Inicio">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 48 48"><path d="M11 5h19l7 7v31H11z"/><path d="M30 5v8h8M17 22h14M17 28h14M17 34h9"/></svg>
+      </span>
+      <span><strong>Expedientes</strong><small>Gestión municipal</small></span>
+    </a>
+    <nav>
+      <a href="#procesar">Procesar</a>
+      <a href="#consultar">Consultar</a>
+      <a href="/docs" target="_blank" rel="noreferrer">API</a>
+    </nav>
+    <div class="health" id="health"><span></span><b>Comprobando</b></div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">PLATAFORMA MUNICIPAL · HU01</p>
+        <h1>Expedientes claros,<br><em>trámites más ágiles.</em></h1>
+        <p class="lead">Carga un expediente en PDF para extraer su contenido, identificar sus documentos y conservar el resultado para futuras consultas.</p>
+        <div class="features">
+          <span><b>PDF</b> validación automática</span>
+          <span><b>OCR</b> lectura de escaneos</span>
+          <span><b>IA</b> clasificación documental</span>
+        </div>
+      </div>
+
+      <section class="upload-card" id="procesar" aria-labelledby="upload-title">
+        <div class="card-heading">
+          <span class="step">01</span>
+          <div><p>NUEVO EXPEDIENTE</p><h2 id="upload-title">Cargar archivo PDF</h2></div>
+        </div>
+        <label class="dropzone" id="dropzone" for="file-input">
+          <input id="file-input" type="file" accept="application/pdf,.pdf">
+          <span class="upload-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48"><path d="M24 33V10m0 0-9 9m9-9 9 9"/><path d="M10 31v7h28v-7"/></svg>
+          </span>
+          <strong id="file-label">Arrastra tu PDF aquí</strong>
+          <small>o haz clic para seleccionar · máximo 20 MB</small>
+        </label>
+        <button class="primary" id="process-button" type="button" disabled>
+          <span>Procesar expediente</span><i aria-hidden="true">→</i>
+        </button>
+        <p class="privacy">El procesamiento se realiza localmente. Usa únicamente documentos ficticios o anonimizados.</p>
+      </section>
+    </section>
+
+    <section class="query-section" id="consultar">
+      <div>
+        <p class="eyebrow">SEGUIMIENTO</p>
+        <h2>Consulta un expediente guardado</h2>
+        <p>Ingresa el identificador entregado al finalizar el procesamiento.</p>
+      </div>
+      <form id="query-form" class="query-form">
+        <label for="dossier-id">Identificador del expediente</label>
+        <div><input id="dossier-id" type="text" placeholder="Ej. 550e8400-e29b-41d4-a716-446655440000" required><button type="submit">Consultar</button></div>
+      </form>
+    </section>
+
+    <section class="status-panel hidden" id="status-panel" aria-live="polite">
+      <div class="spinner" aria-hidden="true"></div>
+      <div><strong id="status-title">Procesando expediente</strong><p id="status-message">Estamos analizando las páginas del documento.</p></div>
+    </section>
+
+    <section class="results hidden" id="results" aria-live="polite">
+      <div class="results-heading">
+        <div><p class="eyebrow">RESULTADO</p><h2>Resumen del expediente</h2></div>
+        <span class="state" id="result-state">PROCESADO</span>
+      </div>
+      <div class="summary-grid">
+        <article><small>Archivo</small><strong id="result-file">-</strong></article>
+        <article><small>Identificador</small><strong class="mono" id="result-id">-</strong></article>
+        <article><small>Documentos</small><strong id="result-count">0</strong></article>
+        <article><small>Fecha UTC</small><strong id="result-date">-</strong></article>
+      </div>
+      <div class="documents" id="documents"></div>
+    </section>
+  </main>
+
+  <footer><span>Prototipo académico local</span><span>Arquitectura hexagonal · FastAPI · SQLite</span></footer>
+  <script src="/assets/app.js" defer></script>
+</body>
+</html>
