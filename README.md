@@ -4,6 +4,22 @@ API Python/FastAPI con arquitectura hexagonal para extracción documental y un f
 
 **Guía actual de las siete historias, fuentes, límites y pruebas: [docs/HUANCAYO.md](docs/HUANCAYO.md).** Consulte también `GET /api/capacidades`. Las instrucciones y limitaciones HU01 que siguen describen el módulo original de extracción.
 
+## Alcance: las siete historias de usuario (HU01-HU07)
+
+Este repositorio contempla el **backend de las siete historias de usuario seleccionadas por el equipo** para la Municipalidad Provincial de Huancayo, con arquitectura hexagonal. Las siete están identificadas en el alcance y tienen soporte local o puntos de entrada en la API; **esto no significa que sus siete criterios de aceptación estén completamente implementados**. El frontend no forma parte de esta entrega; se conserva únicamente la interfaz local preexistente.
+
+| Historia de usuario | Objetivo | Estado actual del backend |
+| --- | --- | --- |
+| **HU01 - Extracción y procesamiento de datos** | Extraer y clasificar anexos PDF mediante OCR/NLP y persistir sus datos. | Extracción PDF/OCR, clasificación FUT/DNI/PLANO, persistencia y rechazo de ilegibilidad implementados; extracción de campos y reconocimiento de otros anexos pendientes de mejora. |
+| **HU02 - Validación normativa y auditoría** | Comparar el expediente con los requisitos del TUPA y generar observaciones. | Catálogo piloto de tres trámites, revisión humana de requisitos y borrador de observaciones por plantilla. Validación automática del contenido y firmas pendiente. |
+| **HU03 - Gestión y resolución con intervención humana** | Revisar, editar, aprobar y firmar borradores; registrar en SISGEDOC y notificar. | Borradores versionados y auditoría implementados. Generación por IA, firma real, SISGEDOC y notificaciones pendientes; la emisión está bloqueada. |
+| **HU04 - Predicción de enrutamiento** | Predecir la unidad de destino y derivar automáticamente cuando la confianza supere el 85 %. | Contrato del modelo y regla de confianza implementados y probados; bandeja y asignación manual locales disponibles. Modelo semántico real pendiente. |
+| **HU05 - Predicción del tiempo de atención (ETA)** | Estimar días hábiles según complejidad y carga de trabajo de la unidad. | Consulta del plazo publicado en el TUPA disponible. ETA predictivo no disponible: faltan histórico, backlog y modelo validado. |
+| **HU06 - Predicción del riesgo de rechazo** | Estimar la probabilidad de rechazo para priorizar la revisión. | Conteo de faltantes confirmados disponible. Probabilidad predictiva no disponible: faltan histórico etiquetado y modelo validado. |
+| **HU07 - Seguridad y privacidad** | Enmascarar datos personales antes de enviarlos a modelos externos. | Vista previa local de enmascaramiento parcial disponible. No garantiza detección integral; los envíos a IA externa permanecen deshabilitados. |
+
+Las pruebas verifican las funciones implementadas, no acreditan el cumplimiento completo de las siete historias. Los plazos publicados no se presentan como predicciones y las integraciones no configuradas no se presentan como realizadas.
+
 ## Ejecutar en esta computadora
 
 Abre esta carpeta en VS Code. Si todavía no existe `.venv` en esta copia, sigue primero la instalación de la siguiente sección. En la terminal PowerShell, desde esta carpeta:
