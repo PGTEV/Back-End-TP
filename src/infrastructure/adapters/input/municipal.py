@@ -59,6 +59,8 @@ def build_municipal_router(service, settings):
         return {"municipalidad": "Municipalidad Provincial de Huancayo", "modo": "ACADEMICO_LOCAL",
                 "seguridad": {"expedientes_protegidos": settings.protect_dossier_routes,
                               "autenticacion": "TOKEN_REVISOR_PROTOTIPO"},
+                "integraciones": {"firma_electronica": False, "sisgedoc": False,
+                                  "notificaciones": False, "enrutamiento_predictivo": False},
                 "HU01": "OCR_Y_CLASIFICACION_LOCAL",
                 "HU02": "PREVALIDACION_TUPA_PILOTO_CON_REVISION_HUMANA",
                 "HU03": "BORRADORES_VERSIONADOS_Y_AUDITORIA; EMISION_NO_DISPONIBLE",

@@ -38,5 +38,17 @@ def classify(page: Page) -> Document:
         if match:
             value = match.group(1)
             fields[key] = re.sub(r"\s+", "", value).replace("/", ":") if key == "escala" else value
+    if kind == "FUT":
+        # Extraer solo valores expresamente etiquetados; conservar acentos y texto fuente.
+        labels = {
+            "asunto": r"ASUNTO", "solicito": r"SOLICITO",
+            "nombres": r"NOMBRES(?:\s+Y\s+APELLIDOS)?", "apellidos": r"APELLIDOS",
+            "domicilio": r"DOMICILIO(?:\s+LEGAL)?", "telefono": r"TEL[EÉ]FONO",
+            "correo": r"CORREO(?:\s+ELECTR[OÓ]NICO)?|E-?MAIL",
+        }
+        for key, label in labels.items():
+            match = re.search(r"(?im)^\s*(?:" + label + r")\s*:\s*([^\r\n]+)", page.text)
+            if match:
+                fields[key] = match.group(1).strip()
     # Una unidad por página evita unir dos DNI o FUT distintos sin evidencia.
     return Document(kind, [page.number], page.text, fields, page.confidence, page.method, page.dpi)

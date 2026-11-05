@@ -41,7 +41,9 @@ class MunicipalWorkflow:
         flow.routing = {}  # Una nueva validación invalida cualquier derivación anterior.
         for draft in flow.drafts:
             draft["vigente"] = False
-        missing = [r["descripcion"] for r in validation["requisitos"] if r["estado"] == "FALTA"]
+        missing = [r["descripcion"] + "\n  Fundamento: " + r["nota"]
+                   + "\n  Páginas revisadas: " + (", ".join(map(str, r["paginas_revisadas"])) or "Sin referencia de página")
+                   for r in validation["requisitos"] if r["estado"] == "FALTA"]
         if missing:
             self._draft(flow, "BORRADOR DE OBSERVACIONES - SIN VALIDEZ ADMINISTRATIVA\n"
                         + "Trámite: " + code + "\nVerificar/subsanar:\n- " + "\n- ".join(missing),
@@ -64,8 +66,12 @@ class MunicipalWorkflow:
         _, flow = self._edit(dossier_id, revision)
         if not flow.validation:
             raise Conflict("Primero seleccione y valide un procedimiento TUPA.")
-        self._draft(flow, content, actor, "EDICION_HUMANA", "PROYECTO")
-        flow.record(actor, "VERSION_BORRADOR", {"version": len(flow.drafts)})
+        previous_version = len(flow.drafts)
+        kind = (flow.drafts[-1]["tipo"] if flow.drafts and flow.drafts[-1]["vigente"]
+                else "OBSERVACION" if flow.validation.get("estado") == "OBSERVADO" else "PROYECTO")
+        self._draft(flow, content, actor, "EDICION_HUMANA", kind)
+        flow.record(actor, "VERSION_BORRADOR", {"version": len(flow.drafts),
+                    "version_anterior": previous_version, "tipo": kind})
         self.workflows.save(flow, revision)
         return flow
 

@@ -97,7 +97,11 @@ def evaluate_requirements(procedure, documents, checks):
                         "nota": note})
     states = {r["estado"] for r in results}
     status = "OBSERVADO" if "FALTA" in states else "PENDIENTE_REVISION" if "PENDIENTE" in states else "CONFORME"
+    alerts = [{"codigo": "REQUISITO_FALTANTE", "requisito": r["id"],
+               "mensaje": r["descripcion"], "nota": r["nota"]}
+              for r in results if r["estado"] == "FALTA"]
     return {"estado": status, "alcance": "PREVALIDACION_DOCUMENTAL_ACADEMICA",
+            "alertas": alerts,
             "habilitado_enrutamiento": status == "CONFORME", "requisitos": results,
             "fuente": procedure.source_url, "version_fuente": procedure.source_version,
             "paginas_fuente": list(procedure.pdf_pages),
