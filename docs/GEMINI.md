@@ -30,6 +30,10 @@ En el portal, cargar `01-conforme-parametros.pdf`, seleccionar PA12115285, audit
 
 Un 429 significa cuota o frecuencia alcanzada: consultar los límites en AI Studio antes de reintentar. Un 401/403 indica que hay que revisar clave/permisos; un 404 indica modelo no disponible. Tiempo de espera, respuesta incompleta/bloqueada o JSON inválido conservan el flujo anterior. No se reintenta automáticamente ni se etiqueta una plantilla local como resultado de Gemini. Una generación puede consumir cuota aunque termine en timeout o conflicto concurrente.
 
+Corrección de compatibilidad: se omite candidateCount, que la guía de Google identifica como no compatible con Gemini 3/4. No se comprobó que fuera la causa de una ejecución concreta en Render. Los diagnósticos ahora distinguen HTTP_400 (parámetros), HTTP_400_PRECONDICION (acceso del proyecto), HTTP_5XX, MAX_TOKENS (truncado), SOLICITUD_BLOQUEADA, BORRADOR_NO_JSON, ESQUEMA_INVALIDO y METADATOS_INCOMPLETOS. Solo se muestran códigos/mensajes locales; no se copian cuerpos ni mensajes libres del proveedor. Fuente: [guía de resolución de problemas](https://aistudio.google.com/docs/troubleshooting#check-api).
+
+La corrección se verificó con 140 pruebas backend aprobadas y compileall correcto, sin llamadas reales a Google. No modifica el frontend ni requiere variables nuevas. Tras fusionarla, esperar el despliegue de Render y volver a generar una sola vez. Si falla, el código local entre corchetes permite identificar el punto del fallo sin compartir credenciales.
+
 ## Privacidad y alcance
 
 El caso de uso construye la misma lista cerrada de hechos para ambos proveedores: procedimiento/requisitos públicos del catálogo, estados documentales, indicador de contradicciones y modo académico. No envía PDF, OCR, texto parcialmente enmascarado, campos extraídos, DNI/RUC, nombres, asunto, notas humanas, identificador del expediente o del evaluador. La clave viaja en la cabecera x-goog-api-key hacia el host fijo de Google, sin aparecer en URL.
