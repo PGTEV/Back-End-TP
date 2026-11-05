@@ -36,6 +36,7 @@ def create_app(settings=None, reader=None):
     reader = reader or PDFReader(settings.max_pages, settings.min_dpi, settings.min_ocr_confidence)
     catalog = JSONProcedureCatalog(Path(__file__).resolve().parents[2] / "config" / "tupa_huancayo.json")
     draft_generator = None
+    evidence_assistant = None
     if settings.protect_dossier_routes:
         if (settings.ai_provider == 'openai' and settings.openai_enabled
                 and settings.openai_api_key.get_secret_value().strip() and settings.openai_model.strip()):
@@ -45,11 +46,12 @@ def create_app(settings=None, reader=None):
                 and settings.gemini_api_key.get_secret_value().strip() and settings.gemini_model.strip()):
             draft_generator = GeminiDraftGenerator(settings.gemini_api_key.get_secret_value(),
                                                   settings.gemini_model, settings.gemini_timeout_seconds)
+            evidence_assistant = draft_generator
     workflow = MunicipalWorkflow(repository, SQLWorkflowRepository(repository.engine), catalog,
                                  SyntheticRoutingModel(catalog) if settings.academic_demo else UnavailableRoutingModel(),
                                  AcademicAdministrativeGateway() if settings.academic_demo else UnavailableAdministrativeGateway(),
                                  LocalPrivacyFilter(), AcademicRequirementAuditor() if settings.academic_demo else None,
-                                 draft_generator)
+                                 draft_generator, evidence_assistant)
 
     @asynccontextmanager
     async def lifespan(app):

@@ -26,6 +26,7 @@ def test_generate_content_contract_and_thoughts_are_excluded():
         assert body['generationConfig']['responseMimeType'] == 'application/json'
         assert body['generationConfig']['responseJsonSchema']['required'] == ['contenido']
         assert body['generationConfig']['maxOutputTokens'] == 4096
+        assert 'candidateCount' not in body['generationConfig']
         assert 'tools' not in body and 'cachedContent' not in body
         assert body['contents'][0]['role'] == 'user'
         data = completed()
@@ -55,6 +56,34 @@ def test_provider_errors_do_not_disclose_secrets(status):
 def test_incomplete_blocked_or_invalid_output_is_not_accepted(data):
     with pytest.raises(DependencyUnavailable):
         generator(lambda r: httpx.Response(200, json=data)).generate({})
+
+
+@pytest.mark.parametrize('status,data,code', [
+    (400, {'error': {'status': 'INVALID_ARGUMENT', 'message': 'SECRET clave-ficticia'}}, 'HTTP_400'),
+    (400, {'error': {'status': 'FAILED_PRECONDITION', 'message': 'SECRET clave-ficticia'}}, 'HTTP_400_PRECONDICION'),
+    (402, {}, 'HTTP_402'), (503, {}, 'HTTP_5XX'),
+    (200, {'candidates': [{'finishReason': 'MAX_TOKENS'}]}, 'MAX_TOKENS'),
+    (200, {'promptFeedback': {'blockReason': 'SECRET clave-ficticia'}}, 'SOLICITUD_BLOQUEADA'),
+    (200, {'candidates': [{'finishReason': 'SECRET clave-ficticia'}]}, 'GENERACION_NO_COMPLETADA'),
+    (200, completed('SECRET clave-ficticia'), 'BORRADOR_NO_JSON'),
+    (200, completed('{"contenido":""}'), 'ESQUEMA_INVALIDO'),
+    (200, {**completed(), 'responseId': ''}, 'METADATOS_INCOMPLETOS'),
+    (200, {}, 'SIN_CANDIDATO_UNICO'),
+])
+def test_diagnostics_are_specific_and_never_echo_provider_data(status, data, code):
+    with pytest.raises(DependencyUnavailable) as error:
+        generator(lambda r: httpx.Response(status, json=data)).generate({})
+    assert f'[{code}]' in str(error.value)
+    assert 'borrador anterior se conserva' in str(error.value)
+    assert 'SECRET' not in str(error.value) and 'clave-ficticia' not in str(error.value)
+
+
+@pytest.mark.parametrize('status,expected', [(400, 'HTTP_400'), (200, 'RESPUESTA_NO_JSON')])
+def test_non_json_http_body_is_not_exposed(status, expected):
+    with pytest.raises(DependencyUnavailable) as error:
+        generator(lambda r: httpx.Response(status, text='SECRET clave-ficticia')).generate({})
+    assert f'[{expected}]' in str(error.value)
+    assert 'SECRET' not in str(error.value)
 
 
 def test_timeout_busy_and_invalid_model_do_not_retry_or_change_host():

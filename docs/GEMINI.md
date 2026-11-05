@@ -1,5 +1,7 @@
 # Gemini para los borradores del sistema municipal
 
+También se incorpora [auditoría TUPA asistida con Gemini](PMV_CINCO_HISTORIAS.md), sobre categorías/páginas y requisitos públicos. Es una acción separada de la generación de borradores y no certifica el contenido de los originales.
+
 Gemini se añade como adaptador del mismo puerto DraftGenerator. Se conservan OpenAI, el endpoint autenticado `POST /api/expedientes/{id}/borradores/ia`, versiones, revisión optimista, auditoría, validación TUPA y las simulaciones universitarias existentes. No se alteran tablas ni se requieren dependencias nuevas; ambos proveedores utilizan httpx.
 
 ## Crear la clave y configurar Render
@@ -29,6 +31,10 @@ Abrir `/api/capacidades`: ia_generativa debe anunciar configurada=true, proveedo
 En el portal, cargar `01-conforme-parametros.pdf`, seleccionar PA12115285, auditar/guardar revisión y pulsar **Generar borrador con Gemini**. Se espera una nueva versión, origen GEMINI, modelo e ID devueltos por Google, y acción BORRADOR_IA. Editar y guardar otra versión para demostrar intervención humana. Con `02-falta-pago.pdf` se genera OBSERVACION y se mantiene el resultado observado. El botón explica bloqueos por revisión sin guardar, cambios en el editor o expediente ya emitido.
 
 Un 429 significa cuota o frecuencia alcanzada: consultar los límites en AI Studio antes de reintentar. Un 401/403 indica que hay que revisar clave/permisos; un 404 indica modelo no disponible. Tiempo de espera, respuesta incompleta/bloqueada o JSON inválido conservan el flujo anterior. No se reintenta automáticamente ni se etiqueta una plantilla local como resultado de Gemini. Una generación puede consumir cuota aunque termine en timeout o conflicto concurrente.
+
+Corrección de compatibilidad: se omite candidateCount, que la guía de Google identifica como no compatible con Gemini 3/4. No se comprobó que fuera la causa de una ejecución concreta en Render. Los diagnósticos ahora distinguen HTTP_400 (parámetros), HTTP_400_PRECONDICION (acceso del proyecto), HTTP_5XX, MAX_TOKENS (truncado), SOLICITUD_BLOQUEADA, BORRADOR_NO_JSON, ESQUEMA_INVALIDO y METADATOS_INCOMPLETOS. Solo se muestran códigos/mensajes locales; no se copian cuerpos ni mensajes libres del proveedor. Fuente: [guía de resolución de problemas](https://aistudio.google.com/docs/troubleshooting#check-api).
+
+La corrección se verificó con 140 pruebas backend aprobadas y compileall correcto, sin llamadas reales a Google. No modifica el frontend ni requiere variables nuevas. Tras fusionarla, esperar el despliegue de Render y volver a generar una sola vez. Si falla, el código local entre corchetes permite identificar el punto del fallo sin compartir credenciales.
 
 ## Privacidad y alcance
 

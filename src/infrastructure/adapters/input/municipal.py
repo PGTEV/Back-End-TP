@@ -60,9 +60,11 @@ def build_municipal_router(service, settings):
                 "modo": "DEMO_UNIVERSITARIA" if settings.academic_demo else "ACADEMICO_LOCAL",
                 "demo": settings.academic_demo,
                 "ia_generativa": {"configurada": service.draft_generator is not None,
+                                  "auditoria_tupa": service.evidence_assistant is not None,
                                   "proveedor": service.draft_generator.provider if service.draft_generator is not None else None,
                                   "modelo": service.draft_generator.model if service.draft_generator is not None else None,
-                                  "alcance": "BORRADORES_CON_HECHOS_MINIMIZADOS", "envia_ocr_o_pdf": False},
+                                  "alcance": "BORRADORES_Y_AUDITORIA_DE_METADATOS" if service.evidence_assistant is not None else "BORRADORES_CON_HECHOS_MINIMIZADOS",
+                                  "envia_ocr_o_pdf": False},
                 "ingreso_documental": {"extraccion": "OCR_LOCAL", "segmentacion": "POR_PAGINA",
                     "privacidad": "SEUDONIMIZACION_LOCAL_PARCIAL", "envio_a_ia_externa": False,
                     "cruce_de_anexos": ["dni", "ruc"], "requiere_api_key": False},
@@ -116,6 +118,11 @@ def build_municipal_router(service, settings):
     def generate_draft(dossier_id: UUID, request: RevisionRequest, response: Response, actor: str = Depends(reviewer)):
         response.headers['Cache-Control'] = 'no-store'
         return invoke(service.generate_draft, str(dossier_id), request.revision, actor)
+
+    @router.post('/expedientes/{dossier_id}/auditoria/ia', tags=['HU02'], status_code=201)
+    def audit_ai(dossier_id: UUID, request: RevisionRequest, response: Response, actor: str = Depends(reviewer)):
+        response.headers['Cache-Control'] = 'no-store'
+        return invoke(service.audit_with_ai, str(dossier_id), request.revision, actor)
 
     @router.post("/expedientes/{dossier_id}/enrutamiento", tags=["HU04"])
     def route(dossier_id: UUID, request: RevisionRequest, actor: str = Depends(reviewer)):
