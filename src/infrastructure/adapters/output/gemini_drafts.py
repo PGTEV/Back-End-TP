@@ -5,6 +5,7 @@ from threading import BoundedSemaphore
 import httpx
 from src.domain.workflow import DependencyUnavailable
 from .draft_contract import DRAFT_INSTRUCTIONS, DRAFT_SCHEMA
+from .audit_contract import AUDIT_INSTRUCTIONS, AUDIT_SCHEMA
 
 
 class GeminiDraftGenerator:
@@ -16,21 +17,27 @@ class GeminiDraftGenerator:
         self._slot = BoundedSemaphore(1)
 
     def generate(self, facts):
+        return self._run(facts, audit=False)
+
+    def analyze(self, facts):
+        return self._run(facts, audit=True)
+
+    def _run(self, facts, audit):
         if not re.fullmatch(r'gemini-[A-Za-z0-9._-]{1,100}', self.model):
             raise DependencyUnavailable('El modelo Gemini configurado no es válido. Use su identificador en GEMINI_MODEL.')
         if not self._slot.acquire(blocking=False):
             raise DependencyUnavailable('La IA está ocupada. Espere a que termine la solicitud actual.')
         try:
-            return self._generate(facts)
+            return self._generate(facts, audit=audit)
         finally:
             self._slot.release()
 
-    def _generate(self, facts):
+    def _generate(self, facts, audit=False):
         body = {
-            'systemInstruction': {'parts': [{'text': DRAFT_INSTRUCTIONS}]},
+            'systemInstruction': {'parts': [{'text': AUDIT_INSTRUCTIONS if audit else DRAFT_INSTRUCTIONS}]},
             'contents': [{'role': 'user', 'parts': [{'text': json.dumps(facts, ensure_ascii=False)}]}],
             'generationConfig': {'maxOutputTokens': 4096,
-                                 'responseMimeType': 'application/json', 'responseJsonSchema': DRAFT_SCHEMA},
+                                 'responseMimeType': 'application/json', 'responseJsonSchema': AUDIT_SCHEMA if audit else DRAFT_SCHEMA},
         }
         try:
             with httpx.Client(timeout=self.timeout, transport=self._transport, follow_redirects=False) as client:
@@ -79,14 +86,18 @@ class GeminiDraftGenerator:
             if not isinstance(parsed, dict):
                 raise self._failure('ESQUEMA_INVALIDO', 'La respuesta no respeta el esquema del borrador.')
             content = parsed.get('contenido')
-            if set(parsed) != {'contenido'} or not isinstance(content, str) or not 1 <= len(content.strip()) <= 20000:
+            if not audit and (set(parsed) != {'contenido'} or not isinstance(content, str) or not 1 <= len(content.strip()) <= 20000):
                 raise self._failure('ESQUEMA_INVALIDO', 'El contenido está vacío, supera el límite o no respeta el esquema del borrador.')
+            if audit and (set(parsed) != {'hallazgos'} or not isinstance(parsed['hallazgos'], list)
+                          or len(parsed['hallazgos']) > 50):
+                raise self._failure('ESQUEMA_INVALIDO', 'La auditoría no respeta el esquema solicitado.')
             response_id, model = data.get('responseId'), data.get('modelVersion')
             if (not isinstance(response_id, str) or not 1 <= len(response_id) <= 200
                     or not isinstance(model, str) or not 1 <= len(model) <= 200):
                 raise self._failure('METADATOS_INCOMPLETOS', 'Google no devolvió el identificador y modelo necesarios para registrar la procedencia.')
-            return {'contenido': content.strip(), 'proveedor': self.provider, 'modelo': model,
-                    'respuesta_id': response_id, 'version_prompt': 'BORRADOR_MINIMIZADO_V1'}
+            return {**({'hallazgos': parsed['hallazgos']} if audit else {'contenido': content.strip()}),
+                    'proveedor': self.provider, 'modelo': model, 'respuesta_id': response_id,
+                    'version_prompt': 'AUDITORIA_MINIMIZADA_V1' if audit else 'BORRADOR_MINIMIZADO_V1'}
         except httpx.TimeoutException:
             raise DependencyUnavailable('Gemini tardó demasiado. No se guardó un borrador nuevo.') from None
         except httpx.RequestError:

@@ -33,3 +33,7 @@ class PrivacyFilter(Protocol):
 
 class DraftGenerator(Protocol):
     def generate(self, facts: dict) -> dict: ...
+
+
+class EvidenceAuditAssistant(Protocol):
+    def analyze(self, facts: dict) -> dict: ...

@@ -1,7 +1,8 @@
 from src.domain.ports import DossierRepository
 from src.domain.intake import protect_and_compare
+from src.domain.evidence_audit import evidence_facts, validate_ai_audit
 from src.domain.ports.workflow import (AdministrativeGateway, LocalRoutingModel, PrivacyFilter,
-                                       ProcedureCatalog, RequirementAuditor, WorkflowRepository, DraftGenerator)
+                                       ProcedureCatalog, RequirementAuditor, WorkflowRepository, DraftGenerator, EvidenceAuditAssistant)
 from src.domain.workflow import (Conflict, DependencyUnavailable, NotFound, Workflow,
                                  WorkflowError, decide_route, evaluate_requirements)
 
@@ -10,11 +11,13 @@ class MunicipalWorkflow:
     def __init__(self, dossiers: DossierRepository, workflows: WorkflowRepository,
                  catalog: ProcedureCatalog, routing: LocalRoutingModel,
                  gateway: AdministrativeGateway, privacy: PrivacyFilter, auditor: RequirementAuditor | None = None,
-                 draft_generator: DraftGenerator | None = None):
+                 draft_generator: DraftGenerator | None = None,
+                 evidence_assistant: EvidenceAuditAssistant | None = None):
         self.dossiers, self.workflows, self.catalog = dossiers, workflows, catalog
         self.routing, self.gateway, self.privacy = routing, gateway, privacy
         self.auditor = auditor
         self.draft_generator = draft_generator
+        self.evidence_assistant = evidence_assistant
 
     def _dossier(self, dossier_id):
         dossier = self.dossiers.get(dossier_id)
@@ -47,6 +50,10 @@ class MunicipalWorkflow:
             flow.demo = True
         validation = evaluate_requirements(procedure, dossier.documents, checks)
         _, consistency = protect_and_compare(dossier.documents)
+        facts = evidence_facts(procedure, dossier.documents, consistency)
+        validation['preauditoria_local'] = {'requisitos': facts['requisitos'],
+                                           'sin_lectura_semantica_del_contenido': True,
+                                           'requiere_revision_humana': True}
         cross_alerts = consistency['alertas']
         if cross_alerts:
             validation['estado'] = 'OBSERVADO' if validation['estado'] == 'OBSERVADO' else 'PENDIENTE_REVISION'
@@ -100,6 +107,34 @@ class MunicipalWorkflow:
         self._draft(flow, content, actor, "EDICION_HUMANA", kind)
         flow.record(actor, "VERSION_BORRADOR", {"version": len(flow.drafts),
                     "version_anterior": previous_version, "tipo": kind})
+        self.workflows.save(flow, revision)
+        return flow
+
+    def audit_with_ai(self, dossier_id, revision, actor):
+        dossier, flow = self._edit(dossier_id, revision)
+        if not flow.validation or not flow.procedure_code:
+            raise Conflict('Primero seleccione y guarde la revisión TUPA.')
+        if self.evidence_assistant is None:
+            raise DependencyUnavailable('La auditoría con Gemini no está configurada. Revise las variables del proveedor en Render.')
+        procedure = self.catalog.get(flow.procedure_code)
+        if procedure is None:
+            raise NotFound('Procedimiento no disponible en el catálogo.')
+        _, consistency = protect_and_compare(dossier.documents)
+        facts = evidence_facts(procedure, dossier.documents, consistency)
+        result = self.evidence_assistant.analyze(facts)
+        findings = validate_ai_audit(result, facts)
+        documents = {d['documento']: d for d in facts['documentos']}
+        report = {key: result[key] for key in ('proveedor', 'modelo', 'respuesta_id', 'version_prompt')}
+        report.update(hallazgos=[{**f, 'paginas': sorted({page for index in f['documentos']
+                                                       for page in documents[index]['paginas']})} for f in findings],
+                      cruce_local=facts['cruce_local'], requiere_revision_humana=True,
+                      fuente=procedure.source_url, paginas_fuente=list(procedure.pdf_pages),
+                      alcance='ASISTENCIA_SOBRE_METADATOS; NO_VERIFICA_CONTENIDO_FIRMAS_O_PAGOS',
+                      transmision={'ocr': False, 'pdf': False, 'valores_personales': False},
+                      fraude_determinado=False)
+        # No aceptar una conclusión del LLM como prueba ni modificar verificaciones humanas.
+        flow.validation['auditoria_ia'] = report
+        flow.record(actor, 'AUDITORIA_IA', report)
         self.workflows.save(flow, revision)
         return flow
 

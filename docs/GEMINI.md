@@ -1,5 +1,7 @@
 # Gemini para los borradores del sistema municipal
 
+También se incorpora [auditoría TUPA asistida con Gemini](PMV_CINCO_HISTORIAS.md), sobre categorías/páginas y requisitos públicos. Es una acción separada de la generación de borradores y no certifica el contenido de los originales.
+
 Gemini se añade como adaptador del mismo puerto DraftGenerator. Se conservan OpenAI, el endpoint autenticado `POST /api/expedientes/{id}/borradores/ia`, versiones, revisión optimista, auditoría, validación TUPA y las simulaciones universitarias existentes. No se alteran tablas ni se requieren dependencias nuevas; ambos proveedores utilizan httpx.
 
 ## Crear la clave y configurar Render
