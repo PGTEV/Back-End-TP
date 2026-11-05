@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 from src.domain.workflow import DependencyUnavailable
 from src.infrastructure.adapters.output.openai_drafts import OpenAIDraftGenerator
+from src.infrastructure.adapters.output.gemini_drafts import GeminiDraftGenerator
 from src.infrastructure.main import create_app
 from src.infrastructure.settings import Settings
 from test_municipal import Reader, complete_checks
@@ -71,17 +72,23 @@ def test_timeout_and_busy_fail_without_retry():
 
 
 @pytest.mark.parametrize('missing_payment', [False, True])
-def test_authenticated_generation_minimizes_data_versions_and_persists(tmp_path, monkeypatch, missing_payment):
+@pytest.mark.parametrize('provider', ['openai', 'gemini'])
+def test_authenticated_generation_minimizes_data_versions_and_persists(tmp_path, monkeypatch, missing_payment, provider):
     captured = []
     def handler(request):
         captured.append(json.loads(request.content))
-        return httpx.Response(200, json=completed())
-    adapter = generator(handler)
-    monkeypatch.setattr('src.infrastructure.main.OpenAIDraftGenerator', lambda *args: adapter)
+        data = completed() if provider == 'openai' else {
+            'responseId': 'resp_test', 'modelVersion': 'gemini-test', 'candidates': [
+                {'finishReason': 'STOP', 'content': {'parts': [{'text': json.dumps({'contenido': 'Borrador de prueba.'})}]}}]}
+        return httpx.Response(200, json=data)
+    adapter = generator(handler) if provider == 'openai' else GeminiDraftGenerator(
+        'clave-ficticia', 'gemini-test', transport=httpx.MockTransport(handler))
+    monkeypatch.setattr('src.infrastructure.main.' + ('OpenAIDraftGenerator' if provider == 'openai' else 'GeminiDraftGenerator'), lambda *args: adapter)
     settings = Settings(_env_file=None, database_url=f'sqlite:///{tmp_path / "db.sqlite"}',
                         storage_dir=str(tmp_path / 'pdf'), reviewer_token=TOKEN, reviewer_id='revisor',
                         protect_dossier_routes=True, openai_enabled=True, openai_api_key='clave-ficticia',
-                        openai_model='modelo-test')
+                        openai_model='modelo-test', ai_provider=provider, gemini_enabled=True,
+                        gemini_api_key='clave-ficticia', gemini_model='gemini-test')
     with TestClient(create_app(settings, Reader())) as client:
         dossier_id = client.post('/api/expedientes', headers=AUTH,
             files={'archivo': ('privado.pdf', b'%PDF-FAKE', 'application/pdf')}).json()['id']
@@ -98,7 +105,7 @@ def test_authenticated_generation_minimizes_data_versions_and_persists(tmp_path,
         assert result.status_code == 201, result.text
         flow = result.json()
         assert flow['validation'] == before['validation'] and flow['routing'] == before['routing']
-        assert flow['drafts'][-1]['origen'] == 'OPENAI'
+        assert flow['drafts'][-1]['origen'] == provider.upper()
         assert flow['drafts'][-1]['ia']['respuesta_id'] == 'resp_test'
         assert flow['audit'][-1]['action'] == 'BORRADOR_IA'
         assert flow['revision'] == 2
@@ -107,7 +114,8 @@ def test_authenticated_generation_minimizes_data_versions_and_persists(tmp_path,
         outbound = json.dumps(captured[0])
         for secret in ['Persona Ficticia', '12345678', '987654321', 'privado.pdf', dossier_id, 'SOLICITO', 'revisor']:
             assert secret not in outbound
-        facts = json.loads(captured[0]['input'])
+        facts = json.loads(captured[0]['input'] if provider == 'openai'
+                           else captured[0]['contents'][0]['parts'][0]['text'])
         assert facts['resultado_documental'] == ('OBSERVADO' if missing_payment else 'CONFORME')
         assert facts['tipo_borrador'] == ('OBSERVACION' if missing_payment else 'PROYECTO')
         assert flow['drafts'][-1]['tipo'] == facts['tipo_borrador']

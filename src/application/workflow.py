@@ -108,7 +108,7 @@ class MunicipalWorkflow:
         if not flow.validation or not flow.procedure_code:
             raise Conflict("Primero guarde la validación TUPA.")
         if self.draft_generator is None:
-            raise DependencyUnavailable("OpenAI no está configurado. Configure la integración en Render.")
+            raise DependencyUnavailable("La IA generativa no está configurada. Revise el proveedor y sus variables en Render.")
         procedure = self.catalog.get(flow.procedure_code)
         if procedure is None:
             raise NotFound("Procedimiento no disponible en el catálogo.")
@@ -128,7 +128,7 @@ class MunicipalWorkflow:
         }
         generated = self.draft_generator.generate(facts)
         self._draft(flow, 'BORRADOR PARA REVISIÓN HUMANA - SIN VALIDEZ ADMINISTRATIVA\n'
-                    + generated['contenido'], actor, 'OPENAI', kind)
+                    + generated['contenido'], actor, generated['proveedor'], kind)
         flow.drafts[-1]['ia'] = {key: generated[key] for key in
                                 ('proveedor', 'modelo', 'respuesta_id', 'version_prompt')}
         flow.record(actor, 'BORRADOR_IA', {'version': len(flow.drafts), 'tipo': kind,

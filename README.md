@@ -148,4 +148,6 @@ Pruebas con PDFs sintéticos, lectura de PDF digital, OCR real sobre imagen esca
 Verificación de esta iteración Huancayo (24 de septiembre de 2026): 47 pruebas aprobadas con Python 3.12, incluidas las pruebas OCR existentes, autenticación, reglas TUPA, versiones, persistencia, concurrencia y privacidad. Ejecutada también `python -m scripts.demo_huancayo` con PDF ficticio y base temporal. Las pruebas usaron el entorno instalado en `D:\Taller de proyectos\Backend\.venv`; esta copia no tenía entorno propio. Dos advertencias de deprecación de Starlette/AnyIO, sin fallos. No se ha reiniciado ni sustituido el servidor del usuario. El comprobador anterior `scripts/check_server.py` crea expedientes ficticios en la base configurada: para pruebas aisladas usar la nueva demo.
 # Integración generativa OpenAI
 
+También se admite [Gemini mediante configuración de Render](docs/GEMINI.md), conservando el mismo flujo y contrato HTTP. Seleccionar AI_PROVIDER=gemini y configurar GEMINI_API_KEY únicamente en el servidor.
+
 Ver [configuración, privacidad y demostración de GPT](docs/OPENAI.md). La generación de borradores es opcional y usa una clave exclusivamente del backend en Render.
