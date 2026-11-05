@@ -29,3 +29,7 @@ class RequirementAuditor(Protocol):
 
 class PrivacyFilter(Protocol):
     def preview(self, text: str, known_names: list[str]) -> dict: ...
+
+
+class DraftGenerator(Protocol):
+    def generate(self, facts: dict) -> dict: ...
