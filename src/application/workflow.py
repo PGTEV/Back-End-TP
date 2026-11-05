@@ -1,4 +1,5 @@
 from src.domain.ports import DossierRepository
+from src.domain.intake import protect_and_compare
 from src.domain.ports.workflow import (AdministrativeGateway, LocalRoutingModel, PrivacyFilter,
                                        ProcedureCatalog, RequirementAuditor, WorkflowRepository)
 from src.domain.workflow import (Conflict, DependencyUnavailable, NotFound, Workflow,
@@ -43,6 +44,15 @@ class MunicipalWorkflow:
             checks = {**self.auditor.checks(procedure, dossier), **checks}
             flow.demo = True
         validation = evaluate_requirements(procedure, dossier.documents, checks)
+        _, consistency = protect_and_compare(dossier.documents)
+        cross_alerts = consistency['alertas']
+        if cross_alerts:
+            validation['estado'] = 'OBSERVADO' if validation['estado'] == 'OBSERVADO' else 'PENDIENTE_REVISION'
+            validation['habilitado_enrutamiento'] = False
+            validation['inconsistencias_cruzadas'] = cross_alerts
+            validation['alertas'].extend({'codigo': alert['codigo'], 'requisito': 'cruce_' + str(index),
+                                         'mensaje': alert['mensaje'], 'nota': 'Revisión humana requerida; no se determina fraude.'}
+                                        for index, alert in enumerate(cross_alerts))
         if flow.demo:
             validation.update(simulado=True, advertencia='DEMO UNIVERSITARIA: evidencias y firmas ficticias. Sin validez administrativa.')
         flow.procedure_code, flow.validation = code, validation
@@ -52,6 +62,7 @@ class MunicipalWorkflow:
         missing = [r["descripcion"] + "\n  Fundamento: " + r["nota"]
                    + "\n  Páginas revisadas: " + (", ".join(map(str, r["paginas_revisadas"])) or "Sin referencia de página")
                    for r in validation["requisitos"] if r["estado"] == "FALTA"]
+        missing.extend('Revisar consistencia entre anexos: ' + alert['mensaje'] for alert in cross_alerts)
         if missing:
             self._draft(flow, "BORRADOR DE OBSERVACIONES - SIN VALIDEZ ADMINISTRATIVA\n"
                         + "Trámite: " + code + "\nVerificar/subsanar:\n- " + "\n- ".join(missing),

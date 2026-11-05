@@ -1,5 +1,7 @@
 # Backend de expedientes - Municipalidad Provincial de Huancayo
 
+**Nuevos PMV de ingreso y auditoría:** [extracción, segmentación, privacidad y cruce de anexos](docs/PMV_INGRESO_PRIVACIDAD_AUDITORIA.md). Funcionan localmente sin API key y mantienen bloqueado el envío a proveedores de IA.
+
 **Trabajo universitario con datos ficticios:** [modo académico y guion de exposición](docs/DEMO_UNIVERSITARIA.md). Se activa con ACADEMIC_DEMO=true; todas las firmas, registros y notificaciones de ese modo se identifican como simulaciones sin validez legal.
 
 **Integración React, protección de rutas y despliegue Vercel/Render:** consultar [DEPLOYMENT.md](DEPLOYMENT.md). Usar `src.infrastructure.main:create_app --factory`. Se conservan la conexión Supabase y los diagnósticos `/health/db` y `/health/ia`.

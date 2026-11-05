@@ -13,3 +13,7 @@ class IllegibleDocument(Exception):
 
 class ProcessingUnavailable(Exception):
     pass
+
+
+class DocumentNotFound(Exception):
+    pass

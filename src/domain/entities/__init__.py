@@ -22,3 +22,5 @@ class Dossier:
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     documents: list[Document] = field(default_factory=list)
     error: str | None = None
+    privacy: dict = field(default_factory=dict)
+    consistency: dict = field(default_factory=dict)

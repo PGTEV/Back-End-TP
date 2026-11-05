@@ -45,6 +45,7 @@ Con ACADEMIC_DEMO=false se conserva la revisión humana y se bloquea la emisión
 7. Cargar `03-asunto-ambiguo.pdf`, auditar PA12115285 y evaluar enrutamiento. Debe ir a CLASIFICACION_MANUAL con alerta; el evaluador puede guardar una gerencia de destino.
 8. Cargar `04-baja-resolucion.pdf`. Debe detenerse con «Documento ilegible, por favor vuelva a cargar el archivo».
 9. `05-plano-sin-firma-demo.pdf` genera una observación por ausencia de la firma ficticia. `06-conforme-zonificacion.pdf` y `07-conforme-funcionamiento.pdf` permiten repetir la auditoría y el destino con los otros códigos.
+10. `08-inconsistencia-dni.pdf` contiene un DNI distinto en el recibo ficticio. El informe debe detectar la diferencia al cargar y bloquear el conforme automático, sin acusar fraude.
 
 El PDF de funcionamiento usa marcadores de NO APLICA para condiciones ficticias. Estos marcadores son un contrato didáctico, no una forma de acreditar requisitos ante una municipalidad. El auditor rechaza documentos que no lleven EXPEDIENTE FICTICIO en todas sus páginas.
 
@@ -65,7 +66,7 @@ python -m scripts.academic_examples --output data/demo-universitaria
 python -m pytest -q
 ```
 
-El frontend incluye el ZIP estático en `public/ejemplos-demo.zip`, compuesto por siete PDFs, el corpus y las instrucciones. No contiene el PDF completo del TUPA ni credenciales.
+El frontend incluye el ZIP estático en `public/ejemplos-demo.zip`, compuesto por ocho PDFs, el corpus y las instrucciones. No contiene el PDF completo del TUPA ni credenciales.
 
 Las pruebas cubren: auditoría automática conforme, pago y firma ficticios faltantes, DPI bajo, alta y baja probabilidad, asignación manual, edición, emisión simulada persistida, idempotencia, rechazo de edición posterior y rechazo de expedientes sin marca ficticia. La suite anterior continúa ejecutándose con ACADEMIC_DEMO=false.
 
