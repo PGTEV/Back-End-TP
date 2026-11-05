@@ -1,5 +1,7 @@
 # Evaluación y aceptación HU01–HU04
 
+**Ampliación para el trabajo universitario:** se incorporó un [modo académico opcional](DEMO_UNIVERSITARIA.md) con el TUPA verificado, expedientes ficticios, auditoría automática de práctica, modelo entrenado con textos sintéticos y emisión explícitamente simulada. Permite demostrar los recorridos; el análisis de cumplimiento municipal real que sigue permanece vigente para el modo normal.
+
 **Resultado: cumplimiento parcial del conjunto solicitado. No se puede acreditar que las cuatro historias estén completas.** Se implementaron las funciones locales verificables; firma, SISGEDOC, notificación y predicción real siguen pendientes. No se dispone de sus integraciones ni de un conjunto histórico anonimizado de expedientes etiquetados.
 
 Esta revisión parte del backend `PGTEV/Back-End-TP`, main `aa49f24`, y del frontend `RobelUC/ExpedientesMuniFront`, main `c0a5bc6`. Las ampliaciones están en la rama `codex/pmv-hu01-hu04` de cada repositorio. No se han fusionado ni desplegado estas ampliaciones en producción.

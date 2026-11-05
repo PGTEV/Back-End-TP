@@ -1,0 +1,34 @@
+{
+  "archivo": "1050892-texto-unico-de-procedimientos-administrativos-tupa-2025.pdf",
+  "sha256": "74d4305c6a6997c088409cc1951579cde5c5485b948a206683d31d01a1f83d53",
+  "paginas": 605,
+  "ordenanza_observada_en_portada": "790-MPH/CM",
+  "revision_visual": "Portada y páginas PDF 75, 76, 80, 81 y 524 verificadas",
+  "catalogo_completo": false,
+  "vigencia_2026_certificada": false,
+  "procedimientos": [
+    {
+      "codigo": "PA121121B0",
+      "paginas_pdf": [
+        75,
+        76
+      ],
+      "requisitos_piloto": 5
+    },
+    {
+      "codigo": "PA12115285",
+      "paginas_pdf": [
+        524
+      ],
+      "requisitos_piloto": 4
+    },
+    {
+      "codigo": "PE1027344C1",
+      "paginas_pdf": [
+        80,
+        81
+      ],
+      "requisitos_piloto": 7
+    }
+  ]
+}

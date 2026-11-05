@@ -20,6 +20,11 @@ class LocalRoutingModel(Protocol):
 
 class AdministrativeGateway(Protocol):
     def require_available(self) -> None: ...
+    def issue(self, dossier_id: str, draft: dict, actor: str) -> dict: ...
+
+
+class RequirementAuditor(Protocol):
+    def checks(self, procedure: Procedure, dossier: Dossier) -> dict: ...
 
 
 class PrivacyFilter(Protocol):

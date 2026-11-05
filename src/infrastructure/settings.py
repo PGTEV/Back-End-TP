@@ -15,3 +15,4 @@ class Settings(BaseSettings):
     reviewer_id: str = ""
     # False conserva el contrato público local; activar en Render para el cliente React.
     protect_dossier_routes: bool = False
+    academic_demo: bool = False

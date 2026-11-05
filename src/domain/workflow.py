@@ -62,6 +62,7 @@ class Workflow:
     routing: dict = field(default_factory=dict)
     drafts: list[dict] = field(default_factory=list)
     audit: list[dict] = field(default_factory=list)
+    demo: bool = False
 
     def record(self, actor: str, action: str, detail: dict):
         if not actor.strip():

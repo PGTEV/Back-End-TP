@@ -18,6 +18,7 @@ from src.application.workflow import MunicipalWorkflow
 from src.domain.privacy import LocalPrivacyFilter
 from src.infrastructure.adapters.input.municipal import build_municipal_router
 from src.infrastructure.adapters.input.security import reviewer_dependency
+from src.infrastructure.adapters.output.academic import AcademicAdministrativeGateway, AcademicRequirementAuditor, SyntheticRoutingModel
 from src.infrastructure.adapters.output.workflow import (
     JSONProcedureCatalog, SQLWorkflowRepository, UnavailableAdministrativeGateway,
     UnavailableRoutingModel,
@@ -31,8 +32,9 @@ def create_app(settings=None, reader=None):
     reader = reader or PDFReader(settings.max_pages, settings.min_dpi, settings.min_ocr_confidence)
     catalog = JSONProcedureCatalog(Path(__file__).resolve().parents[2] / "config" / "tupa_huancayo.json")
     workflow = MunicipalWorkflow(repository, SQLWorkflowRepository(repository.engine), catalog,
-                                 UnavailableRoutingModel(), UnavailableAdministrativeGateway(),
-                                 LocalPrivacyFilter())
+                                 SyntheticRoutingModel(catalog) if settings.academic_demo else UnavailableRoutingModel(),
+                                 AcademicAdministrativeGateway() if settings.academic_demo else UnavailableAdministrativeGateway(),
+                                 LocalPrivacyFilter(), AcademicRequirementAuditor() if settings.academic_demo else None)
 
     @asynccontextmanager
     async def lifespan(app):

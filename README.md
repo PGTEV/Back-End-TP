@@ -1,5 +1,7 @@
 # Backend de expedientes - Municipalidad Provincial de Huancayo
 
+**Trabajo universitario con datos ficticios:** [modo académico y guion de exposición](docs/DEMO_UNIVERSITARIA.md). Se activa con ACADEMIC_DEMO=true; todas las firmas, registros y notificaciones de ese modo se identifican como simulaciones sin validez legal.
+
 **Integración React, protección de rutas y despliegue Vercel/Render:** consultar [DEPLOYMENT.md](DEPLOYMENT.md). Usar `src.infrastructure.main:create_app --factory`. Se conservan la conexión Supabase y los diagnósticos `/health/db` y `/health/ia`.
 
 **Evaluación actual HU01–HU04 y pruebas de aceptación:** [docs/PMV_HU01_HU04.md](docs/PMV_HU01_HU04.md). El cumplimiento es parcial; el editor y la revisión local funcionan, pero no hay firma/SISGEDOC/notificación ni modelo predictivo entrenado.
