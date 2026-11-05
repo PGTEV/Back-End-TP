@@ -16,6 +16,7 @@ from src.infrastructure.adapters.output.ocr import PDFReader
 from src.infrastructure.adapters.output.storage import LocalFileStorage
 from src.infrastructure.adapters.output.pdf_segments import LocalPDFSegmenter
 from src.infrastructure.settings import Settings
+from src.infrastructure.adapters.output.openai_drafts import OpenAIDraftGenerator
 from src.application.workflow import MunicipalWorkflow
 from src.domain.privacy import LocalPrivacyFilter
 from src.infrastructure.adapters.input.municipal import build_municipal_router
@@ -33,10 +34,14 @@ def create_app(settings=None, reader=None):
     storage = LocalFileStorage(settings.storage_dir)
     reader = reader or PDFReader(settings.max_pages, settings.min_dpi, settings.min_ocr_confidence)
     catalog = JSONProcedureCatalog(Path(__file__).resolve().parents[2] / "config" / "tupa_huancayo.json")
+    ai_ready = (settings.openai_enabled and settings.protect_dossier_routes
+                and bool(settings.openai_api_key.get_secret_value().strip()) and bool(settings.openai_model.strip()))
     workflow = MunicipalWorkflow(repository, SQLWorkflowRepository(repository.engine), catalog,
                                  SyntheticRoutingModel(catalog) if settings.academic_demo else UnavailableRoutingModel(),
                                  AcademicAdministrativeGateway() if settings.academic_demo else UnavailableAdministrativeGateway(),
-                                 LocalPrivacyFilter(), AcademicRequirementAuditor() if settings.academic_demo else None)
+                                 LocalPrivacyFilter(), AcademicRequirementAuditor() if settings.academic_demo else None,
+                                 OpenAIDraftGenerator(settings.openai_api_key.get_secret_value(), settings.openai_model,
+                                                      settings.openai_timeout_seconds) if ai_ready else None)
 
     @asynccontextmanager
     async def lifespan(app):

@@ -48,9 +48,9 @@ Los JSON de expedientes también llevan Cache-Control=no-store. Se conservan la 
 
 ## ¿Hace falta Gemini o GPT?
 
-**No para lo implementado.** El OCR es real y local; comparar DNI/RUC no necesita un LLM y produce resultados reproducibles con evidencia de páginas. No se añadieron claves, dependencias de proveedores ni variables de IA remota.
+El OCR y la comparación DNI/RUC siguen siendo locales. Se añadió posteriormente una integración opcional real de **OpenAI para redactar borradores**, documentada en [OPENAI.md](OPENAI.md). Esta integración requiere clave en Render y no transmite texto OCR ni PDFs.
 
-Gemini o GPT podrían ampliar la extracción semántica o la redacción, con un adaptador de salida y un contrato de resultados validado. Ambos proveedores documentan salida estructurada: [Gemini](https://aistudio.google.com/docs/structured-output), [OpenAI](https://developers.openai.com/api/docs/guides/structured-outputs). Esa ampliación no está conectada en esta entrega. Antes de habilitar envíos sería necesario definir qué datos pueden salir y verificar la protección del contenido: el filtro parcial actual no autoriza transmitir texto libre. Las claves se configurarían exclusivamente en Render, nunca en VITE ni en Git.
+El adaptador de OpenAI utiliza salida estructurada y una lista cerrada de hechos públicos/estados, excluyendo texto libre y notas del evaluador. El filtro parcial actual sigue sin autorizar transmitir texto OCR. Las claves se configuran exclusivamente en Render, nunca en VITE ni en Git. No se ha añadido extracción semántica remota ni un adaptador Gemini.
 
 ## Demostración y pruebas
 
@@ -62,4 +62,4 @@ Los PDFs ficticios actualizados se renderizaron y revisaron visualmente; la inte
 
 ## Despliegue
 
-Fusionar/publicar primero el backend y después el frontend. No se requiere una API key ni una variable nueva para esta ampliación. Mantener PROTECT_DOSSIER_ROUTES=true y el almacenamiento persistente de los originales para permitir sus descargas. ACADEMIC_DEMO=true solo se necesita para los recorridos universitarios simulados ya documentados.
+Fusionar/publicar primero el backend y después el frontend. El ingreso local funciona sin API key. Para la redacción con GPT configurar las variables de [OPENAI.md](OPENAI.md). Mantener PROTECT_DOSSIER_ROUTES=true y el almacenamiento persistente de los originales para permitir sus descargas. ACADEMIC_DEMO=true solo se necesita para los recorridos universitarios simulados ya documentados.

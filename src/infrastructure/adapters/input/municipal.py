@@ -1,7 +1,7 @@
 from dataclasses import asdict
 from typing import Literal
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from src.infrastructure.adapters.input.security import reviewer_dependency
 from pydantic import BaseModel, ConfigDict, Field
 from src.domain.workflow import Conflict, DependencyUnavailable, NotFound, WorkflowError
@@ -59,6 +59,10 @@ def build_municipal_router(service, settings):
         return {"municipalidad": "Municipalidad Provincial de Huancayo",
                 "modo": "DEMO_UNIVERSITARIA" if settings.academic_demo else "ACADEMICO_LOCAL",
                 "demo": settings.academic_demo,
+                "ia_generativa": {"configurada": service.draft_generator is not None,
+                                  "proveedor": "OPENAI" if service.draft_generator is not None else None,
+                                  "modelo": settings.openai_model if service.draft_generator is not None else None,
+                                  "alcance": "BORRADORES_CON_HECHOS_MINIMIZADOS", "envia_ocr_o_pdf": False},
                 "ingreso_documental": {"extraccion": "OCR_LOCAL", "segmentacion": "POR_PAGINA",
                     "privacidad": "SEUDONIMIZACION_LOCAL_PARCIAL", "envio_a_ia_externa": False,
                     "cruce_de_anexos": ["dni", "ruc"], "requiere_api_key": False},
@@ -107,6 +111,11 @@ def build_municipal_router(service, settings):
                  summary="No disponible sin integración real de firma y SISGEDOC")
     def approve(dossier_id: UUID, request: RevisionRequest, actor: str = Depends(reviewer)):
         return invoke(service.approve_and_sign, str(dossier_id), request.revision, actor)
+
+    @router.post("/expedientes/{dossier_id}/borradores/ia", tags=["HU03"], status_code=201)
+    def generate_draft(dossier_id: UUID, request: RevisionRequest, response: Response, actor: str = Depends(reviewer)):
+        response.headers['Cache-Control'] = 'no-store'
+        return invoke(service.generate_draft, str(dossier_id), request.revision, actor)
 
     @router.post("/expedientes/{dossier_id}/enrutamiento", tags=["HU04"])
     def route(dossier_id: UUID, request: RevisionRequest, actor: str = Depends(reviewer)):

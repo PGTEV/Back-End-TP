@@ -1,7 +1,7 @@
 from src.domain.ports import DossierRepository
 from src.domain.intake import protect_and_compare
 from src.domain.ports.workflow import (AdministrativeGateway, LocalRoutingModel, PrivacyFilter,
-                                       ProcedureCatalog, RequirementAuditor, WorkflowRepository)
+                                       ProcedureCatalog, RequirementAuditor, WorkflowRepository, DraftGenerator)
 from src.domain.workflow import (Conflict, DependencyUnavailable, NotFound, Workflow,
                                  WorkflowError, decide_route, evaluate_requirements)
 
@@ -9,10 +9,12 @@ from src.domain.workflow import (Conflict, DependencyUnavailable, NotFound, Work
 class MunicipalWorkflow:
     def __init__(self, dossiers: DossierRepository, workflows: WorkflowRepository,
                  catalog: ProcedureCatalog, routing: LocalRoutingModel,
-                 gateway: AdministrativeGateway, privacy: PrivacyFilter, auditor: RequirementAuditor | None = None):
+                 gateway: AdministrativeGateway, privacy: PrivacyFilter, auditor: RequirementAuditor | None = None,
+                 draft_generator: DraftGenerator | None = None):
         self.dossiers, self.workflows, self.catalog = dossiers, workflows, catalog
         self.routing, self.gateway, self.privacy = routing, gateway, privacy
         self.auditor = auditor
+        self.draft_generator = draft_generator
 
     def _dossier(self, dossier_id):
         dossier = self.dossiers.get(dossier_id)
@@ -98,6 +100,39 @@ class MunicipalWorkflow:
         self._draft(flow, content, actor, "EDICION_HUMANA", kind)
         flow.record(actor, "VERSION_BORRADOR", {"version": len(flow.drafts),
                     "version_anterior": previous_version, "tipo": kind})
+        self.workflows.save(flow, revision)
+        return flow
+
+    def generate_draft(self, dossier_id, revision, actor):
+        _, flow = self._edit(dossier_id, revision)
+        if not flow.validation or not flow.procedure_code:
+            raise Conflict("Primero guarde la validación TUPA.")
+        if self.draft_generator is None:
+            raise DependencyUnavailable("OpenAI no está configurado. Configure la integración en Render.")
+        procedure = self.catalog.get(flow.procedure_code)
+        if procedure is None:
+            raise NotFound("Procedimiento no disponible en el catálogo.")
+        state = flow.validation.get('estado')
+        kind = 'PROYECTO' if state == 'CONFORME' else 'OBSERVACION'
+        # Lista cerrada: nada de OCR, nombres, notas humanas, identificadores ni archivos.
+        requirements = {r['id']: r for r in flow.validation.get('requisitos', [])}
+        facts = {
+            'tipo_borrador': kind, 'demostracion': flow.demo,
+            'procedimiento': {'codigo': procedure.code, 'nombre': procedure.name,
+                              'gerencia': procedure.department, 'fuente': procedure.source_url},
+            'resultado_documental': state,
+            'requiere_revision_cruzada': bool(flow.validation.get('inconsistencias_cruzadas')),
+            'requisitos': [{'descripcion': r.description,
+                           'estado': requirements.get(r.id, {}).get('estado', 'PENDIENTE')}
+                          for r in procedure.requirements],
+        }
+        generated = self.draft_generator.generate(facts)
+        self._draft(flow, 'BORRADOR PARA REVISIÓN HUMANA - SIN VALIDEZ ADMINISTRATIVA\n'
+                    + generated['contenido'], actor, 'OPENAI', kind)
+        flow.drafts[-1]['ia'] = {key: generated[key] for key in
+                                ('proveedor', 'modelo', 'respuesta_id', 'version_prompt')}
+        flow.record(actor, 'BORRADOR_IA', {'version': len(flow.drafts), 'tipo': kind,
+                                        **flow.drafts[-1]['ia']})
         self.workflows.save(flow, revision)
         return flow
 
