@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class DocumentResponse(BaseModel):
@@ -20,3 +20,6 @@ class DossierResponse(BaseModel):
     creado_en: str
     error: str | None
     documentos: list[DocumentResponse]
+    privacidad: dict = Field(default_factory=dict)
+    consistencia: dict = Field(default_factory=dict)
+    segmentacion: dict = Field(default_factory=dict)

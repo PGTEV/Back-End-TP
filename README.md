@@ -1,6 +1,12 @@
 # Backend de expedientes - Municipalidad Provincial de Huancayo
 
+**Nuevos PMV de ingreso y auditoría:** [extracción, segmentación, privacidad y cruce de anexos](docs/PMV_INGRESO_PRIVACIDAD_AUDITORIA.md). Funcionan localmente sin API key y mantienen bloqueado el envío a proveedores de IA.
+
+**Trabajo universitario con datos ficticios:** [modo académico y guion de exposición](docs/DEMO_UNIVERSITARIA.md). Se activa con ACADEMIC_DEMO=true; todas las firmas, registros y notificaciones de ese modo se identifican como simulaciones sin validez legal.
+
 **Integración React, protección de rutas y despliegue Vercel/Render:** consultar [DEPLOYMENT.md](DEPLOYMENT.md). Usar `src.infrastructure.main:create_app --factory`. Se conservan la conexión Supabase y los diagnósticos `/health/db` y `/health/ia`.
+
+**Evaluación actual HU01–HU04 y pruebas de aceptación:** [docs/PMV_HU01_HU04.md](docs/PMV_HU01_HU04.md). El cumplimiento es parcial; el editor y la revisión local funcionan, pero no hay firma/SISGEDOC/notificación ni modelo predictivo entrenado.
 
 API Python/FastAPI con arquitectura hexagonal para extracción documental y un flujo académico de Huancayo. Se conserva la interfaz local existente sin ampliar el frontend. Esta iteración añade catálogo TUPA piloto, revisión documental, borradores versionados, auditoría, bandeja local y privacidad sin envíos externos. No emite actos administrativos ni dispone de modelos predictivos entrenados.
 

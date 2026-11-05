@@ -4,6 +4,7 @@ from src.domain.classification import classify
 from src.domain.entities import Dossier
 from src.domain.errors import IllegibleDocument, InvalidPDF, ProcessingUnavailable
 from src.domain.ports import DocumentReader, DossierRepository, FileStorage
+from src.domain.intake import protect_and_compare
 
 
 class ProcessDossier:
@@ -23,6 +24,7 @@ class ProcessDossier:
         try:
             pages = self.reader.extract(content)
             dossier.documents = [classify(page) for page in pages]
+            dossier.privacy, dossier.consistency = protect_and_compare(dossier.documents)
             dossier.status = "PROCESADO"
         except IllegibleDocument as error:
             dossier.status, dossier.error = "ILEGIBLE", error.message
@@ -46,4 +48,7 @@ class GetDossier:
         self.repository = repository
 
     def execute(self, dossier_id: str) -> Dossier | None:
-        return self.repository.get(dossier_id)
+        dossier = self.repository.get(dossier_id)
+        if dossier is not None and dossier.documents:
+            dossier.privacy, dossier.consistency = protect_and_compare(dossier.documents)
+        return dossier

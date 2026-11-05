@@ -56,13 +56,23 @@ def build_municipal_router(service, settings):
 
     @router.get("/capacidades", tags=["Servicio"], summary="Alcance real del prototipo Huancayo")
     def capabilities():
-        return {"municipalidad": "Municipalidad Provincial de Huancayo", "modo": "ACADEMICO_LOCAL",
+        return {"municipalidad": "Municipalidad Provincial de Huancayo",
+                "modo": "DEMO_UNIVERSITARIA" if settings.academic_demo else "ACADEMICO_LOCAL",
+                "demo": settings.academic_demo,
+                "ingreso_documental": {"extraccion": "OCR_LOCAL", "segmentacion": "POR_PAGINA",
+                    "privacidad": "SEUDONIMIZACION_LOCAL_PARCIAL", "envio_a_ia_externa": False,
+                    "cruce_de_anexos": ["dni", "ruc"], "requiere_api_key": False},
                 "seguridad": {"expedientes_protegidos": settings.protect_dossier_routes,
                               "autenticacion": "TOKEN_REVISOR_PROTOTIPO"},
+                "integraciones": {"firma_electronica": False, "sisgedoc": False,
+                                  "notificaciones": False, "enrutamiento_predictivo": False},
+                "simulaciones": {"habilitadas": settings.academic_demo,
+                                 "firma_sisgedoc_notificacion": settings.academic_demo,
+                                 "modelo_datos_sinteticos": settings.academic_demo},
                 "HU01": "OCR_Y_CLASIFICACION_LOCAL",
-                "HU02": "PREVALIDACION_TUPA_PILOTO_CON_REVISION_HUMANA",
-                "HU03": "BORRADORES_VERSIONADOS_Y_AUDITORIA; EMISION_NO_DISPONIBLE",
-                "HU04": "BANDEJA_MANUAL; MODELO_PREDICTIVO_NO_CONFIGURADO",
+                "HU02": "AUDITORIA_AUTOMATICA_EVIDENCIAS_FICTICIAS" if settings.academic_demo else "PREVALIDACION_TUPA_PILOTO_CON_REVISION_HUMANA",
+                "HU03": "EMISION_SIMULADA_UNIVERSITARIA" if settings.academic_demo else "BORRADORES_VERSIONADOS_Y_AUDITORIA; EMISION_NO_DISPONIBLE",
+                "HU04": "MODELO_SINTETICO_Y_DERIVACION_LOCAL_DEMO" if settings.academic_demo else "BANDEJA_MANUAL; MODELO_PREDICTIVO_NO_CONFIGURADO",
                 "HU05": "PLAZO_TUPA_REFERENCIAL; ETA_PREDICTIVO_NO_DISPONIBLE",
                 "HU06": "FALTANTES_DOCUMENTALES; PROBABILIDAD_NO_DISPONIBLE",
                 "HU07": "ENMASCARAMIENTO_LOCAL_PARCIAL; TRANSMISION_EXTERNA_BLOQUEADA"}
@@ -71,6 +81,10 @@ def build_municipal_router(service, settings):
                 dependencies=[Depends(reviewer)] if settings.protect_dossier_routes else [])
     def procedures():
         return {"municipalidad": "Municipalidad Provincial de Huancayo", "catalogo_completo": False,
+                "demo": settings.academic_demo,
+                "fuente": {"sha256": service.catalog.metadata['source_sha256'],
+                           "archivo_pdf_paginas": 605, "ordenanza": "790-MPH/CM",
+                           "paginas_pdf_verificadas": [75, 76, 80, 81, 524]},
                 "vigencia_normativa_2026_certificada": False,
                 "procedimientos": [asdict(p) for p in service.catalog.list()]}
 

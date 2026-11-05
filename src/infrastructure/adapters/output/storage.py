@@ -13,3 +13,9 @@ class LocalFileStorage:
 
     def delete(self, dossier_id: str) -> None:
         (self.root / f"{dossier_id}.pdf").unlink(missing_ok=True)
+
+    def read(self, dossier_id: str) -> bytes | None:
+        try:
+            return (self.root / f"{dossier_id}.pdf").read_bytes()
+        except FileNotFoundError:
+            return None

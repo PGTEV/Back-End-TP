@@ -36,7 +36,8 @@ class PDFReader:
             if rect.width > 0 and rect.height > 0 and rect.get_area() >= page.rect.get_area() * 0.4:
                 dpis.append(min(info["width"] * 72 / rect.width, info["height"] * 72 / rect.height))
         dpi = min(dpis) if dpis else None
-        if dpi is not None and dpi + 0.5 < self.min_dpi:
+        # Solo tolerancia numérica; no aceptar escaneos de 149.5 DPI como 150 DPI.
+        if dpi is not None and dpi + 1e-6 < self.min_dpi:
             raise IllegibleDocument(number)
         text = page.get_text().strip()
         # Un PDF escaneado con capa OCR previa debe volver a verificarse visualmente.

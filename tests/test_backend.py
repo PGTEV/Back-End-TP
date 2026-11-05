@@ -144,7 +144,13 @@ def test_heavily_blurred_scan(settings):
             page.insert_image(page.rect, stream=encoded.tobytes())
             content = output.tobytes(deflate=True)
     with TestClient(create_app(settings)) as client:
-        assert send(client, content).status_code == 422
+        response = send(client, content)
+        assert response.status_code == 422
+        detail = response.json()["detail"]
+        assert detail["mensaje"] == "Documento ilegible, por favor vuelva a cargar el archivo"
+        persisted = client.get(f"/api/expedientes/{detail['id']}").json()
+        assert persisted["estado"] == "ILEGIBLE"
+        assert persisted["documentos"] == []
 
 
 def test_core_has_no_framework_or_infrastructure_imports():

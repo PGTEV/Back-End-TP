@@ -29,3 +29,22 @@ def test_scale_keeps_source_text():
     result = document(original)
     assert result.text == original
     assert result.fields["escala"] == "1:500"
+
+
+def test_fut_extracts_only_explicit_labels_and_preserves_accents():
+    result = document('FORMULARIO UNICO DE TRAMITE\nASUNTO: Parámetros urbanísticos\n'
+                      'Nombres y apellidos: Persona Ficticia\nDOMICILIO LEGAL: Dirección de prueba\n'
+                      'TELÉFONO: 999000111\nCORREO ELECTRÓNICO: prueba@example.invalid')
+    assert result.type == 'FUT'
+    assert result.fields['asunto'] == 'Parámetros urbanísticos'
+    assert result.fields['nombres'] == 'Persona Ficticia'
+    assert result.fields['domicilio'] == 'Dirección de prueba'
+    assert result.fields['telefono'] == '999000111'
+    assert result.fields['correo'] == 'prueba@example.invalid'
+    assert 'apellidos' not in result.fields
+
+
+def test_missing_fut_labels_are_not_invented():
+    result = document('FORMULARIO UNICO DE TRAMITE\nSe menciona un asunto en texto libre sin etiqueta.')
+    assert 'asunto' not in result.fields
+    assert 'nombres' not in result.fields

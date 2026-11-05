@@ -9,15 +9,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from src.application.useCases import GetDossier, ProcessDossier
+from src.application.useCases.get_document_pdf import GetDocumentPDF
 from src.infrastructure.adapters.input.controllers import build_router
 from src.infrastructure.adapters.output.database import SQLDossierRepository
 from src.infrastructure.adapters.output.ocr import PDFReader
 from src.infrastructure.adapters.output.storage import LocalFileStorage
+from src.infrastructure.adapters.output.pdf_segments import LocalPDFSegmenter
 from src.infrastructure.settings import Settings
 from src.application.workflow import MunicipalWorkflow
 from src.domain.privacy import LocalPrivacyFilter
 from src.infrastructure.adapters.input.municipal import build_municipal_router
 from src.infrastructure.adapters.input.security import reviewer_dependency
+from src.infrastructure.adapters.output.academic import AcademicAdministrativeGateway, AcademicRequirementAuditor, SyntheticRoutingModel
 from src.infrastructure.adapters.output.workflow import (
     JSONProcedureCatalog, SQLWorkflowRepository, UnavailableAdministrativeGateway,
     UnavailableRoutingModel,
@@ -31,8 +34,9 @@ def create_app(settings=None, reader=None):
     reader = reader or PDFReader(settings.max_pages, settings.min_dpi, settings.min_ocr_confidence)
     catalog = JSONProcedureCatalog(Path(__file__).resolve().parents[2] / "config" / "tupa_huancayo.json")
     workflow = MunicipalWorkflow(repository, SQLWorkflowRepository(repository.engine), catalog,
-                                 UnavailableRoutingModel(), UnavailableAdministrativeGateway(),
-                                 LocalPrivacyFilter())
+                                 SyntheticRoutingModel(catalog) if settings.academic_demo else UnavailableRoutingModel(),
+                                 AcademicAdministrativeGateway() if settings.academic_demo else UnavailableAdministrativeGateway(),
+                                 LocalPrivacyFilter(), AcademicRequirementAuditor() if settings.academic_demo else None)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -46,7 +50,8 @@ def create_app(settings=None, reader=None):
     web_dir = Path(__file__).parent / "adapters" / "input" / "web"
     app.mount("/assets", StaticFiles(directory=web_dir / "assets"), name="assets")
     dossier_dependencies = [Depends(reviewer_dependency(settings))] if settings.protect_dossier_routes else []
-    app.include_router(build_router(ProcessDossier(reader, repository, storage), GetDossier(repository), settings.max_file_mb),
+    app.include_router(build_router(ProcessDossier(reader, repository, storage), GetDossier(repository), settings.max_file_mb,
+                       GetDocumentPDF(repository, storage, LocalPDFSegmenter())),
                        dependencies=dossier_dependencies)
     app.include_router(build_municipal_router(workflow, settings))
 

@@ -12,7 +12,7 @@ En PowerShell local, reemplazar `$PORT` por `8000` y usar `--host 127.0.0.1`. Es
 
 Se añadió `PROTECT_DOSSIER_ROUTES` (por defecto false para preservar los clientes locales). Cuando es true, exige el Bearer de revisor en POST/GET de expedientes y GET del catálogo. Las rutas de flujo ya exigían esta credencial y mantienen esa protección. `/health` y `/api/capacidades` siguen públicos. El único cambio de respuesta existente es el campo aditivo `seguridad` de capacidades. No hay endpoints nuevos ni cambios de esquema SQL ni migraciones de datos.
 
-No existe edición de campos de extracción ni ruta de descarga de originales. La carga ya escribe en SQL y disco. La revisión TUPA es otra escritura real, con control optimista `revision`, auditoría e identidad fijada por el servidor.
+No existe edición de campos de extracción. La carga ya escribe en SQL y disco. Se añadió descarga de segmentos originales mediante `GET /api/expedientes/{id}/documentos/{index}/pdf`, con la protección de expedientes y sin tokens en URLs; requiere que el original siga disponible. La revisión TUPA es otra escritura real, con control optimista `revision`, auditoría e identidad fijada por el servidor.
 
 ## Render
 
@@ -46,7 +46,7 @@ Con un PDF sintético y una credencial válida, sin exponerla en capturas/logs:
 - Subir el PDF devuelve 201, UUID, SHA-256 y documentos; consultar por ID devuelve la misma extracción.
 - «Verificar guardado en BD» confirma la copia; consultar el ID después de un reinicio conserva el resultado. Comprobar también los originales en el disco configurado.
 - Revisar TUPA devuelve una revisión nueva y mantiene PENDIENTE_REVISION hasta completar revisión humana; enviar una revisión antigua devuelve 409. Una confianza OCR alta no acredita cumplimiento normativo.
-- El visor muestra el archivo cargado y permite descargarlo. Una consulta posterior conserva la extracción pero no recupera el original por HTTP.
+- El visor muestra el archivo cargado y permite descargarlo. Una consulta posterior conserva la extracción y permite descargar sus segmentos originales autorizados si permanecen en el almacenamiento.
 
 Se verificó la instalación anterior mediante GET/OPTIONS: frontend, health y capacidades responden, el contrato coincide y el preflight CORS autoriza el origen real. No se subieron archivos a producción ni se consultaron expedientes reales. No hay acceso a los paneles para comprobar las variables, el commit vinculado o el disco. La versión corregida se prueba localmente con Python 3.12 y las versiones bloqueadas; no se probó una conexión real a Supabase ni Linux/Render.
 

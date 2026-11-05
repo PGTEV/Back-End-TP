@@ -24,6 +24,8 @@ def classify(page: Page) -> Document:
         "DNI": sum(phrase in text for phrase in (
             "DOCUMENTO NACIONAL DE IDENTIDAD", "REGISTRO NACIONAL DE IDENTIFICACION", "RENIEC")),
         "PLANO": 1 if plan_title and plan_layout else 0,
+        "RECIBO_PAGO": 2 if re.search(r'(?m)^\s*(?:RECIBO\s+DE\s+PAGO|COMPROBANTE\s+DE\s+PAGO)\b', text)
+                           and re.search(r'(?m)^\s*(?:IMPORTE|MONTO|TOTAL|N[UÚ]MERO\s+DE\s+OPERACI[OÓ]N)\s*:', text) else 0,
     }
     best = max(scores.values())
     winners = [kind for kind, score in scores.items() if score == best]
@@ -38,5 +40,17 @@ def classify(page: Page) -> Document:
         if match:
             value = match.group(1)
             fields[key] = re.sub(r"\s+", "", value).replace("/", ":") if key == "escala" else value
+    if kind in {"FUT", "DNI", "RECIBO_PAGO"}:
+        # Extraer solo valores expresamente etiquetados; conservar acentos y texto fuente.
+        labels = {
+            "asunto": r"ASUNTO", "solicito": r"SOLICITO",
+            "nombres": r"NOMBRES(?:\s+Y\s+APELLIDOS)?", "apellidos": r"APELLIDOS",
+            "domicilio": r"DOMICILIO(?:\s+LEGAL)?", "telefono": r"TEL[EÉ]FONO",
+            "correo": r"CORREO(?:\s+ELECTR[OÓ]NICO)?|E-?MAIL",
+        }
+        for key, label in labels.items():
+            match = re.search(r"(?im)^\s*(?:" + label + r")\s*:\s*([^\r\n]+)", page.text)
+            if match:
+                fields[key] = match.group(1).strip()
     # Una unidad por página evita unir dos DNI o FUT distintos sin evidencia.
     return Document(kind, [page.number], page.text, fields, page.confidence, page.method, page.dpi)

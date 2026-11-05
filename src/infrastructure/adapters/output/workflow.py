@@ -72,3 +72,6 @@ class UnavailableRoutingModel:
 class UnavailableAdministrativeGateway:
     def require_available(self):
         raise DependencyUnavailable("Firma, SISGEDOC y notificaciones no configurados. No se realizó ninguna emisión.")
+
+    def issue(self, dossier_id, draft, actor):
+        self.require_available()
