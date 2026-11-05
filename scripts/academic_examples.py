@@ -1,6 +1,7 @@
 """PDFs ficticios y corpus didáctico. Ejecutar: python -m scripts.academic_examples --output DIR."""
 import argparse
 import json
+import re
 from pathlib import Path
 import pymupdf
 from src.infrastructure.adapters.output.workflow import JSONProcedureCatalog
@@ -9,20 +10,23 @@ from src.infrastructure.adapters.output.academic import SyntheticRoutingModel
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def demo_pdf(code='PA12115285', missing=None, ambiguous=False, unsigned=False, dni_conflict=False):
+def demo_pdf(code='PA12115285', missing=None, ambiguous=False, unsigned=False, dni_conflict=False,
+             *, reference='', dni='00000000'):
+    if not re.fullmatch(r'\d{8}', dni) or not re.fullmatch(r'[A-Z0-9_-]{0,40}', reference):
+        raise ValueError('Identidad o referencia ficticia con formato inválido.')
     catalog = JSONProcedureCatalog(ROOT / 'config/tupa_huancayo.json')
     procedure = catalog.get(code)
     subject = 'Consulta general sobre gestiones diversas' if ambiguous else procedure.name
     texts = ['EXPEDIENTE FICTICIO - DEMOSTRACION UNIVERSITARIA\nFORMULARIO UNICO DE TRAMITE\n'
-             'NOMBRES: Persona Ficticia de Prueba\nDNI: 00000000\nASUNTO: ' + subject
+             'NOMBRES: Persona Ficticia ' + (reference or 'de Prueba') + '\nDNI: ' + dni + '\nASUNTO: ' + subject
              + '\nSOLICITO: ' + subject + '\nEVIDENCIA DEMO: solicitud']
     for requirement in procedure.requirements:
         if requirement.id == 'solicitud' or requirement.id == missing:
             continue
         fee = {'PA12115285': '153.20', 'PA121121B0': '2929.40', 'PE1027344C1': '216.00'}[code]
-        title = ('DOCUMENTO NACIONAL DE IDENTIDAD\nRENIEC\nDNI: 00000000' if requirement.id == 'identidad'
+        title = ('DOCUMENTO NACIONAL DE IDENTIDAD\nRENIEC\nDNI: ' + dni if requirement.id == 'identidad'
                  else 'PLANO DE UBICACION\nESCALA: 1:500\nLAMINA: DEMO' if 'plano' in requirement.id
-                 else 'RECIBO DE PAGO\nIMPORTE: ' + fee + '\nDNI: ' + ('99999999' if dni_conflict else '00000000') if requirement.id == 'pago'
+                 else 'RECIBO DE PAGO\nIMPORTE: ' + fee + '\nDNI: ' + ('99999999' if dni_conflict else dni) if requirement.id == 'pago'
                  else 'ANEXO FICTICIO: ' + requirement.id)
         marker = ('NO APLICA DEMO: ' if requirement.conditional else 'EVIDENCIA DEMO: ') + requirement.id
         signature = '\nFIRMA DEMO: PROFESIONAL FICTICIO' if requirement.id == 'plano_firmado' and not unsigned else ''
@@ -31,6 +35,8 @@ def demo_pdf(code='PA12115285', missing=None, ambiguous=False, unsigned=False, d
         for index, text in enumerate(texts):
             page = pdf.new_page()
             page.insert_text((45, 35), 'DEMO UNIVERSITARIA - DATOS FICTICIOS - SIN VALIDEZ LEGAL', fontsize=11, color=(0.7, 0, 0))
+            if reference:
+                page.insert_text((45, 55), 'REGISTRO FICTICIO: ' + reference, fontsize=10)
             result = page.insert_textbox(pymupdf.Rect(45, 70, 550, 745), text, fontsize=12, lineheight=1.5)
             if result < 0:
                 raise ValueError('El ejemplo no cabe en la página; ajuste la maquetación.')
