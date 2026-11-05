@@ -1,5 +1,7 @@
 # Backend de expedientes - Municipalidad Provincial de Huancayo
 
+**Integración React, protección de rutas y despliegue Vercel/Render:** consultar [DEPLOYMENT.md](DEPLOYMENT.md). Usar `src.infrastructure.main:create_app --factory`. Se conservan la conexión Supabase y los diagnósticos `/health/db` y `/health/ia`.
+
 API Python/FastAPI con arquitectura hexagonal para extracción documental y un flujo académico de Huancayo. Se conserva la interfaz local existente sin ampliar el frontend. Esta iteración añade catálogo TUPA piloto, revisión documental, borradores versionados, auditoría, bandeja local y privacidad sin envíos externos. No emite actos administrativos ni dispone de modelos predictivos entrenados.
 
 **Guía actual de las siete historias, fuentes, límites y pruebas: [docs/HUANCAYO.md](docs/HUANCAYO.md).** Consulte también `GET /api/capacidades`. Las instrucciones y limitaciones HU01 que siguen describen el módulo original de extracción.

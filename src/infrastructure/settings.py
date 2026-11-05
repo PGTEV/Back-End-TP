@@ -13,3 +13,5 @@ class Settings(BaseSettings):
     min_ocr_confidence: float = Field(default=0.65, ge=0, le=1)
     reviewer_token: SecretStr = SecretStr("")
     reviewer_id: str = ""
+    # False conserva el contrato público local; activar en Render para el cliente React.
+    protect_dossier_routes: bool = False

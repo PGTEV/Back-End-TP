@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from time import perf_counter
 import pymupdf
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,6 +17,7 @@ from src.infrastructure.settings import Settings
 from src.application.workflow import MunicipalWorkflow
 from src.domain.privacy import LocalPrivacyFilter
 from src.infrastructure.adapters.input.municipal import build_municipal_router
+from src.infrastructure.adapters.input.security import reviewer_dependency
 from src.infrastructure.adapters.output.workflow import (
     JSONProcedureCatalog, SQLWorkflowRepository, UnavailableAdministrativeGateway,
     UnavailableRoutingModel,
@@ -44,7 +45,9 @@ def create_app(settings=None, reader=None):
                        allow_methods=["GET", "POST"], allow_headers=["Content-Type", "Authorization"])
     web_dir = Path(__file__).parent / "adapters" / "input" / "web"
     app.mount("/assets", StaticFiles(directory=web_dir / "assets"), name="assets")
-    app.include_router(build_router(ProcessDossier(reader, repository, storage), GetDossier(repository), settings.max_file_mb))
+    dossier_dependencies = [Depends(reviewer_dependency(settings))] if settings.protect_dossier_routes else []
+    app.include_router(build_router(ProcessDossier(reader, repository, storage), GetDossier(repository), settings.max_file_mb),
+                       dependencies=dossier_dependencies)
     app.include_router(build_municipal_router(workflow, settings))
 
     @app.get("/", include_in_schema=False)
