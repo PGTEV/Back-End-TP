@@ -1,9 +1,8 @@
 from dataclasses import asdict
-from secrets import compare_digest
 from typing import Literal
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from src.infrastructure.adapters.input.security import reviewer_dependency
 from pydantic import BaseModel, ConfigDict, Field
 from src.domain.workflow import Conflict, DependencyUnavailable, NotFound, WorkflowError
 
@@ -40,17 +39,7 @@ class PrivacyRequest(BaseModel):
 
 def build_municipal_router(service, settings):
     router = APIRouter(prefix="/api")
-    bearer = HTTPBearer(auto_error=False)
-
-    def reviewer(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
-        token = settings.reviewer_token.get_secret_value()
-        if len(token) < 32 or not settings.reviewer_id.strip():
-            raise HTTPException(503, detail={"codigo": "REVISOR_NO_CONFIGURADO",
-                                "mensaje": "Configure REVIEWER_TOKEN (mínimo 32 caracteres) y REVIEWER_ID en .env para usar el flujo local."})
-        if credentials is None or not compare_digest(credentials.credentials.encode(), token.encode()):
-            raise HTTPException(401, detail="Credencial de evaluador inválida.",
-                                headers={"WWW-Authenticate": "Bearer"})
-        return settings.reviewer_id
+    reviewer = reviewer_dependency(settings)
 
     def invoke(function, *args):
         try:
@@ -68,6 +57,8 @@ def build_municipal_router(service, settings):
     @router.get("/capacidades", tags=["Servicio"], summary="Alcance real del prototipo Huancayo")
     def capabilities():
         return {"municipalidad": "Municipalidad Provincial de Huancayo", "modo": "ACADEMICO_LOCAL",
+                "seguridad": {"expedientes_protegidos": settings.protect_dossier_routes,
+                              "autenticacion": "TOKEN_REVISOR_PROTOTIPO"},
                 "HU01": "OCR_Y_CLASIFICACION_LOCAL",
                 "HU02": "PREVALIDACION_TUPA_PILOTO_CON_REVISION_HUMANA",
                 "HU03": "BORRADORES_VERSIONADOS_Y_AUDITORIA; EMISION_NO_DISPONIBLE",
@@ -76,7 +67,8 @@ def build_municipal_router(service, settings):
                 "HU06": "FALTANTES_DOCUMENTALES; PROBABILIDAD_NO_DISPONIBLE",
                 "HU07": "ENMASCARAMIENTO_LOCAL_PARCIAL; TRANSMISION_EXTERNA_BLOQUEADA"}
 
-    @router.get("/tupa/procedimientos", tags=["HU02"], summary="Catálogo piloto oficial de Huancayo")
+    @router.get("/tupa/procedimientos", tags=["HU02"], summary="Catálogo piloto oficial de Huancayo",
+                dependencies=[Depends(reviewer)] if settings.protect_dossier_routes else [])
     def procedures():
         return {"municipalidad": "Municipalidad Provincial de Huancayo", "catalogo_completo": False,
                 "vigencia_normativa_2026_certificada": False,
