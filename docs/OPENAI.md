@@ -1,5 +1,7 @@
 # Borradores con OpenAI / GPT
 
+También se admite [Gemini](GEMINI.md). Para usar OpenAI establecer AI_PROVIDER=openai; para deshabilitar ambos proveedores, AI_PROVIDER=none. No hay conmutación automática entre proveedores.
+
 Se implementa una llamada real a `POST https://api.openai.com/v1/responses` mediante httpx, ya instalado. El puerto `DraftGenerator` mantiene el dominio y los casos de uso independientes del proveedor. No se añaden claves a Git ni al cliente React.
 
 ## Configuración en Render

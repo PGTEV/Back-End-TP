@@ -50,7 +50,7 @@ Los JSON de expedientes también llevan Cache-Control=no-store. Se conservan la 
 
 El OCR y la comparación DNI/RUC siguen siendo locales. Se añadió posteriormente una integración opcional real de **OpenAI para redactar borradores**, documentada en [OPENAI.md](OPENAI.md). Esta integración requiere clave en Render y no transmite texto OCR ni PDFs.
 
-El adaptador de OpenAI utiliza salida estructurada y una lista cerrada de hechos públicos/estados, excluyendo texto libre y notas del evaluador. El filtro parcial actual sigue sin autorizar transmitir texto OCR. Las claves se configuran exclusivamente en Render, nunca en VITE ni en Git. No se ha añadido extracción semántica remota ni un adaptador Gemini.
+Los adaptadores de OpenAI y [Gemini](GEMINI.md) utilizan salida estructurada y una lista cerrada de hechos públicos/estados, excluyendo texto libre y notas del evaluador. El filtro parcial actual sigue sin autorizar transmitir texto OCR. Las claves se configuran exclusivamente en Render, nunca en VITE ni en Git. No se ha añadido extracción semántica remota.
 
 ## Demostración y pruebas
 

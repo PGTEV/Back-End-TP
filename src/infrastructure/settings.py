@@ -1,4 +1,5 @@
 from pydantic import Field, SecretStr
+from typing import Literal
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,3 +21,9 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr = SecretStr("")
     openai_model: str = ""
     openai_timeout_seconds: int = Field(default=60, ge=5, le=120)
+    # openai conserva los despliegues previos; no hay conmutación automática ni llamadas dobles.
+    ai_provider: Literal['openai', 'gemini', 'none'] = 'openai'
+    gemini_enabled: bool = False
+    gemini_api_key: SecretStr = SecretStr('')
+    gemini_model: str = 'gemini-3.8-flash'
+    gemini_timeout_seconds: int = Field(default=60, ge=5, le=120)
