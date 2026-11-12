@@ -37,13 +37,16 @@ class SQLDossierRepository:
         metadata.create_all(self.engine)
 
     def save(self, dossier: Dossier) -> None:
+        payload = asdict(dossier)
+        if dossier.academic_owner is None:
+            payload.pop("academic_owner")
         with self.engine.begin() as connection:
             exists = connection.execute(select(self.table.c.id).where(self.table.c.id == dossier.id)).first()
             if exists:
                 connection.execute(self.table.update().where(self.table.c.id == dossier.id)
-                                   .values(payload=asdict(dossier)))
+                                   .values(payload=payload))
             else:
-                connection.execute(self.table.insert().values(id=dossier.id, payload=asdict(dossier)))
+                connection.execute(self.table.insert().values(id=dossier.id, payload=payload))
 
     def get(self, dossier_id: str) -> Dossier | None:
         with self.engine.connect() as connection:

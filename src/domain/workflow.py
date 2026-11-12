@@ -3,6 +3,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from math import isfinite
 
+ROUTING_THRESHOLD = 0.85
+
 
 class WorkflowError(Exception):
     pass
@@ -112,7 +114,7 @@ def evaluate_requirements(procedure, documents, checks):
 def decide_route(prediction, allowed_departments):
     if prediction.department not in allowed_departments:
         raise WorkflowError("El modelo devolvió una unidad desconocida para el catálogo.")
-    automatic = prediction.confidence > 0.85
+    automatic = prediction.confidence > ROUTING_THRESHOLD
     return {"estado": "DERIVADO_LOCAL" if automatic else "CLASIFICACION_MANUAL",
             "destino": prediction.department if automatic else None,
             "sugerencia": prediction.department, "confianza": prediction.confidence,

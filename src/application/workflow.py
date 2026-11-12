@@ -1,7 +1,7 @@
 from src.domain.ports import DossierRepository
 from src.domain.intake import protect_and_compare
 from src.domain.evidence_audit import evidence_facts, validate_ai_audit
-from src.domain.ports.workflow import (AdministrativeGateway, LocalRoutingModel, PrivacyFilter,
+from src.domain.ports.workflow import (AcademicIndicatorEstimator, AdministrativeGateway, LocalRoutingModel, PrivacyFilter,
                                        ProcedureCatalog, RequirementAuditor, WorkflowRepository, DraftGenerator, EvidenceAuditAssistant)
 from src.domain.workflow import (Conflict, DependencyUnavailable, NotFound, Workflow,
                                  WorkflowError, decide_route, evaluate_requirements)
@@ -12,12 +12,16 @@ class MunicipalWorkflow:
                  catalog: ProcedureCatalog, routing: LocalRoutingModel,
                  gateway: AdministrativeGateway, privacy: PrivacyFilter, auditor: RequirementAuditor | None = None,
                  draft_generator: DraftGenerator | None = None,
-                 evidence_assistant: EvidenceAuditAssistant | None = None):
+                 evidence_assistant: EvidenceAuditAssistant | None = None,
+                 academic_indicators: AcademicIndicatorEstimator | None = None,
+                 routing_assessment: dict | None = None):
         self.dossiers, self.workflows, self.catalog = dossiers, workflows, catalog
         self.routing, self.gateway, self.privacy = routing, gateway, privacy
         self.auditor = auditor
         self.draft_generator = draft_generator
         self.evidence_assistant = evidence_assistant
+        self.academic_indicators = academic_indicators
+        self.routing_assessment = routing_assessment
 
     def _dossier(self, dossier_id):
         dossier = self.dossiers.get(dossier_id)
@@ -171,8 +175,10 @@ class MunicipalWorkflow:
         self.workflows.save(flow, revision)
         return flow
 
-    def approve_and_sign(self, dossier_id, revision, actor):
+    def approve_and_sign(self, dossier_id, revision, actor, responsible_id=None):
         _, flow = self._edit(dossier_id, revision, allow_emitted=True)
+        if responsible_id is not None and flow.routing.get("responsable_id") != responsible_id:
+            raise NotFound("Expediente no encontrado.")
         if not flow.drafts or not flow.drafts[-1]["vigente"]:
             raise Conflict("No existe borrador vigente para revisar.")
         # No marcar aprobado/firmado antes de una integración real, autenticada y verificable.
@@ -195,23 +201,33 @@ class MunicipalWorkflow:
         if self.auditor is not None and not flow.demo:
             raise Conflict('Valide primero el expediente ficticio en modo académico.')
         procedure = self.catalog.get(flow.procedure_code)
+        academic_roles = dossier.academic_owner is not None
+        assessment = self.routing_assessment if academic_roles else None
         try:
+            if assessment is not None and not assessment["aprobada"]:
+                raise DependencyUnavailable("Evaluación sintética de enrutamiento insuficiente.")
             prediction = self.routing.predict(dossier)
             flow.routing = decide_route(prediction, {p.department for p in self.catalog.list()})
             if flow.demo:
                 flow.routing.update(simulado=True, alcance='BANDEJA_ACADEMICA_LOCAL',
                                     datos_modelo='SINTETICOS', probabilidad_calibrada=False)
+            if academic_roles and flow.routing["destino"] is not None:
+                flow.routing.update(estado="SUGERENCIA_ACADEMICA", destino=None)
         except DependencyUnavailable:
             flow.routing = {"estado": "CLASIFICACION_MANUAL", "destino": None,
                             "sugerencia": procedure.department, "confianza": None,
                             "modelo": None, "alerta": True, "motivo": "MODELO_NO_CONFIGURADO",
                             "origen_sugerencia": "UNIDAD_RESPONSABLE_PUBLICADA_EN_TUPA",
                             "alcance": "BANDEJA_LOCAL_NO_SISGEDOC"}
+        if assessment is not None:
+            flow.routing["evaluacion_sintetica"] = assessment
+            if not assessment["aprobada"]:
+                flow.routing["motivo"] = "EVALUACION_SINTETICA_INSUFICIENTE"
         flow.record(actor, "ENRUTAMIENTO", flow.routing.copy())
         self.workflows.save(flow, revision)
         return flow
 
-    def assign(self, dossier_id, department, revision, actor):
+    def assign(self, dossier_id, department, revision, actor, responsible_id=None):
         _, flow = self._edit(dossier_id, revision)
         if flow.validation.get("estado") != "CONFORME":
             raise Conflict("Primero complete la validación documental.")
@@ -220,6 +236,8 @@ class MunicipalWorkflow:
         flow.routing = {"estado": "DERIVADO_LOCAL", "destino": department,
                         "confianza": None, "origen": "ASIGNACION_HUMANA", "alerta": False,
                         "alcance": "BANDEJA_LOCAL_NO_SISGEDOC"}
+        if responsible_id is not None:
+            flow.routing["responsable_id"] = responsible_id
         flow.record(actor, "ASIGNACION_MANUAL", flow.routing.copy())
         self.workflows.save(flow, revision)
         return flow
@@ -227,8 +245,9 @@ class MunicipalWorkflow:
     def indicators(self, dossier_id):
         flow = self.get(dossier_id)
         procedure = self.catalog.get(flow.procedure_code) if flow.procedure_code else None
-        missing = sum(r["estado"] == "FALTA" for r in flow.validation.get("requisitos", []))
-        return {"eta": {"estado": "NO_DISPONIBLE", "dias_habiles_predichos": None,
+        requirements = flow.validation.get("requisitos", [])
+        missing = sum(r["estado"] == "FALTA" for r in requirements)
+        result = {"eta": {"estado": "NO_DISPONIBLE", "dias_habiles_predichos": None,
                          "motivo": "Sin histórico, modelo validado ni backlog municipal.",
                          "plazo_tupa_referencial_dias_habiles": procedure.published_days if procedure else None,
                          "fuente": procedure.source_url if procedure else None,
@@ -237,6 +256,15 @@ class MunicipalWorkflow:
                             "motivo": "Sin histórico etiquetado ni modelo validado.",
                             "requisitos_faltantes_confirmados": missing,
                             "requiere_revision": flow.validation.get("estado") != "CONFORME"}}
+        if self.academic_indicators and procedure and flow.demo:
+            dossier = self._dossier(dossier_id)
+            if dossier.academic_owner is not None:
+                pages = len({page for document in dossier.documents for page in document.pages})
+                pending = sum(requirement["estado"] == "PENDIENTE" for requirement in requirements)
+                result["academico"] = self.academic_indicators.predict(
+                    procedure.published_days, pages, missing, pending,
+                    bool(flow.validation.get("inconsistencias_cruzadas")))
+        return result
 
     def privacy_preview(self, dossier_id, known_names):
         dossier = self._dossier(dossier_id)

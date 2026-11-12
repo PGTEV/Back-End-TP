@@ -1,10 +1,17 @@
-from pydantic import Field, SecretStr
+from pydantic import BaseModel, Field, SecretStr
 from typing import Literal
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+class AcademicAccount(BaseModel):
+    id: str = Field(pattern=r"^[a-z][a-z0-9_-]{2,39}$")
+    role: Literal["administrador", "evaluador", "responsable"]
+    token: SecretStr
+    department: str | None = None
+
+
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", hide_input_in_errors=True)
     database_url: str = "sqlite:///./data/expedientes.db"
     storage_dir: str = "./data/originales"
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
@@ -18,6 +25,7 @@ class Settings(BaseSettings):
     protect_dossier_routes: bool = False
     request_metrics_enabled: bool = False
     academic_demo: bool = False
+    academic_accounts: list[AcademicAccount] = Field(default_factory=list, repr=False)
     openai_enabled: bool = False
     openai_api_key: SecretStr = SecretStr("")
     openai_model: str = ""
