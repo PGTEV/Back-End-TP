@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     reviewer_id: str = ""
     # False conserva el contrato público local; activar en Render para el cliente React.
     protect_dossier_routes: bool = False
+    request_metrics_enabled: bool = False
     academic_demo: bool = False
     openai_enabled: bool = False
     openai_api_key: SecretStr = SecretStr("")
