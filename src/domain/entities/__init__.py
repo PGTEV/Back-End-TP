@@ -24,3 +24,4 @@ class Dossier:
     error: str | None = None
     privacy: dict = field(default_factory=dict)
     consistency: dict = field(default_factory=dict)
+    academic_owner: str | None = None

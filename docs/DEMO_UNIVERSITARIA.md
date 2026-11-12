@@ -1,5 +1,36 @@
 # Demostración universitaria HU01–HU04 con el TUPA de Huancayo
 
+## Demostración local por roles
+
+Ejecute desde la raíz del backend, con Python 3.12 y las dependencias de `requirements.lock.txt` instaladas.
+
+```powershell
+python -m scripts.run_academic_demo
+```
+
+El lanzador escucha en `127.0.0.1:8000`, crea SQLite y almacenamiento en un directorio temporal, genera los PDF ficticios e imprime los tokens de esta ejecución. Los tokens solo son válidos durante la sesión local. Termine con Ctrl+C. El directorio se retira al salir. Use el frontend local en `http://localhost:5173` con `VITE_API_URL=http://127.0.0.1:8000/api`. Para otro origen local, pase `--frontend-origin` al lanzador. El servicio se construye con `_env_file=None` y el proveedor externo desactivado.
+
+| Cuenta | Permisos |
+|---|---|
+| `admin-demo` | Consulta todos los expedientes académicos de la sesión y los asigna a un responsable. |
+| `evaluador-demo` | Carga, consulta y revisa expedientes propios. Puede editar borradores, evaluar el destino y asignar. |
+| `evaluador-control` | Mismos permisos que el evaluador sobre expedientes propios. Sirve para mostrar la denegación de un expediente ajeno. |
+| `responsable-*` | Consulta y aprueba únicamente los expedientes que le fueron asignados de forma explícita. |
+| `revisor-legado` | Conserva el flujo de compatibilidad para expedientes sin propietario académico. |
+
+El backend autentica el token y devuelve el identificador y rol mediante `GET /api/academico/sesion`. El alias del formulario no se usa en la auditoría. Fuera del lanzador, las cuentas se configuran mediante `ACADEMIC_ACCOUNTS` y solo se habilitan con `ACADEMIC_DEMO=true` y `PROTECT_DOSSIER_ROUTES=true`. Los campos son `id`, `role`, `token` y, para un responsable, `department` con el nombre exacto del catálogo. Use secretos aleatorios de al menos 32 caracteres y un responsable por área.
+
+Cada página debe mostrar la marca EXPEDIENTE FICTICIO. Esa marca es una comprobación del ejercicio y no certifica que un documento carezca de datos reales. Los indicadores se muestran con el flujo TUPA guardado. El enrutamiento recomienda un área y la asignación queda a cargo de una persona. El plazo y el riesgo son estimaciones didácticas con datos generados. La firma, el registro SISGEDOC y la notificación son simulaciones locales sin validez legal.
+
+### Guion por roles
+
+1. Inicie sesión como `evaluador-demo`. Cargue el PDF `02-falta-pago.pdf`, elija el procedimiento `PA12115285` y ejecute la auditoría automática. Muestre el resultado observado y guarde una versión de la observación con una nota ficticia.
+2. Cargue `01-conforme-parametros.pdf` y valide el mismo procedimiento. Muestre las estimaciones académicas y ejecute el enrutamiento. Copie el ID para la consulta del administrador.
+3. Cierre sesión e intente consultar ese ID como `evaluador-control`. Después, entre como `admin-demo`, consulte el mismo ID y guarde la asignación a Gerencia de Desarrollo Urbano.
+4. Inicie sesión con el responsable de esa gerencia. Consulte el expediente y ejecute **Aprobar y Firmar (simulación)**. Muestre el número DEMO, la firma y la notificación ficticia. Abra la auditoría y descargue un segmento PDF.
+
+Para volver al prototipo anterior, cierre el lanzador, vuelva a las ramas base y use el almacenamiento previo. Mantenga separados los datos temporales del laboratorio. Desactivar las cuentas en el backend nuevo conserva el aislamiento de los expedientes académicos. No hay migraciones que revertir.
+
 El modo académico permite demostrar los recorridos funcionales con expedientes ficticios. **No emite actos administrativos, no firma documentos de forma legal, no se conecta a SISGEDOC y no envía mensajes reales.** Las respuestas, el historial y la interfaz identifican esas operaciones como simulaciones.
 
 ## Documento TUPA verificado

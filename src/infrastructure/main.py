@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from time import perf_counter
 import pymupdf
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,8 +22,9 @@ from src.application.workflow import MunicipalWorkflow
 from src.domain.privacy import LocalPrivacyFilter
 from src.infrastructure.adapters.input.municipal import build_municipal_router
 from src.infrastructure.adapters.input.metrics import RequestMetricsMiddleware
-from src.infrastructure.adapters.input.security import reviewer_dependency
+from src.infrastructure.adapters.input.academic_access import AcademicAccess
 from src.infrastructure.adapters.output.academic import AcademicAdministrativeGateway, AcademicRequirementAuditor, SyntheticRoutingModel
+from src.infrastructure.adapters.output.academic_indicators import SyntheticAcademicIndicators, assess_routing
 from src.infrastructure.adapters.output.workflow import (
     JSONProcedureCatalog, SQLWorkflowRepository, UnavailableAdministrativeGateway,
     UnavailableRoutingModel,
@@ -36,6 +37,8 @@ def create_app(settings=None, reader=None):
     storage = LocalFileStorage(settings.storage_dir)
     reader = reader or PDFReader(settings.max_pages, settings.min_dpi, settings.min_ocr_confidence)
     catalog = JSONProcedureCatalog(Path(__file__).resolve().parents[2] / "config" / "tupa_huancayo.json")
+    workflows = SQLWorkflowRepository(repository.engine)
+    access = AcademicAccess(settings, repository, workflows, catalog)
     draft_generator = None
     evidence_assistant = None
     if settings.protect_dossier_routes:
@@ -48,11 +51,13 @@ def create_app(settings=None, reader=None):
             draft_generator = GeminiDraftGenerator(settings.gemini_api_key.get_secret_value(),
                                                   settings.gemini_model, settings.gemini_timeout_seconds)
             evidence_assistant = draft_generator
-    workflow = MunicipalWorkflow(repository, SQLWorkflowRepository(repository.engine), catalog,
-                                 SyntheticRoutingModel(catalog) if settings.academic_demo else UnavailableRoutingModel(),
+    routing = SyntheticRoutingModel(catalog) if settings.academic_demo else UnavailableRoutingModel()
+    workflow = MunicipalWorkflow(repository, workflows, catalog, routing,
                                  AcademicAdministrativeGateway() if settings.academic_demo else UnavailableAdministrativeGateway(),
                                  LocalPrivacyFilter(), AcademicRequirementAuditor() if settings.academic_demo else None,
-                                 draft_generator, evidence_assistant)
+                                 draft_generator, evidence_assistant,
+                                 SyntheticAcademicIndicators() if access.accounts else None,
+                                 assess_routing(routing, catalog) if access.accounts else None)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -67,11 +72,9 @@ def create_app(settings=None, reader=None):
         app.add_middleware(RequestMetricsMiddleware)
     web_dir = Path(__file__).parent / "adapters" / "input" / "web"
     app.mount("/assets", StaticFiles(directory=web_dir / "assets"), name="assets")
-    dossier_dependencies = [Depends(reviewer_dependency(settings))] if settings.protect_dossier_routes else []
     app.include_router(build_router(ProcessDossier(reader, repository, storage), GetDossier(repository), settings.max_file_mb,
-                       GetDocumentPDF(repository, storage, LocalPDFSegmenter())),
-                       dependencies=dossier_dependencies)
-    app.include_router(build_municipal_router(workflow, settings))
+                       access, GetDocumentPDF(repository, storage, LocalPDFSegmenter())))
+    app.include_router(build_municipal_router(workflow, settings, access))
 
     @app.get("/", include_in_schema=False)
     def home():

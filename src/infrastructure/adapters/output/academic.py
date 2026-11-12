@@ -5,13 +5,11 @@ from hashlib import sha256
 from math import exp, log
 import re
 from src.domain.classification import normalize
+from src.domain.intake import is_fictional
 from src.domain.workflow import RoutingPrediction, WorkflowError
 
-DEMO_MARKER = 'EXPEDIENTE FICTICIO'
-
-
 def require_fictional(dossier):
-    if not dossier.documents or not all(DEMO_MARKER in normalize(d.text) for d in dossier.documents):
+    if not is_fictional(dossier.documents):
         raise WorkflowError('El modo académico solo audita expedientes marcados EXPEDIENTE FICTICIO en todas sus páginas.')
 
 
@@ -21,14 +19,14 @@ class AcademicRequirementAuditor:
         require_fictional(dossier)
         result = {}
         for requirement in procedure.requirements:
-            marker = re.compile(r'(?m)^EVIDENCIA DEMO:\s*' + re.escape(requirement.id.upper()) + r'\s*$')
+            marker = re.compile(r'(?m)^EVIDENCIA[ \t]*DEMO:\s*' + re.escape(requirement.id.upper()) + r'\s*$')
             pages = [p for d in dossier.documents if marker.search(normalize(d.text)) for p in d.pages]
             not_applicable = requirement.conditional and any(
-                re.search(r'(?m)^NO APLICA DEMO:\s*' + re.escape(requirement.id.upper()) + r'\s*$', normalize(d.text))
+                re.search(r'(?m)^NO[ \t]*APLICA[ \t]*DEMO:\s*' + re.escape(requirement.id.upper()) + r'\s*$', normalize(d.text))
                 for d in dossier.documents)
             if requirement.id == 'plano_firmado':
                 pages = [p for d in dossier.documents if marker.search(normalize(d.text))
-                         and 'FIRMA DEMO: PROFESIONAL FICTICIO' in normalize(d.text) for p in d.pages]
+                         and re.search(r'FIRMA[ \t]*DEMO:\s*PROFESIONAL[ \t]*FICTICIO\b', normalize(d.text)) for p in d.pages]
             state = 'NO_APLICA' if not_applicable else 'CUMPLE' if pages else 'FALTA'
             result[requirement.id] = {'estado': state, 'paginas': pages,
                 'nota': 'AUDITORIA AUTOMATICA DEMO: ' + ('evidencia ficticia detectada.' if pages else

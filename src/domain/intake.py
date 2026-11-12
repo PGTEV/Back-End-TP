@@ -1,5 +1,6 @@
 """Cruce determinista de datos declarados. Una contradicción no acredita fraude."""
 import re
+from src.domain.classification import normalize
 from src.domain.privacy import LocalPrivacyFilter
 
 
@@ -28,3 +29,10 @@ def protect_and_compare(documents):
                    'fraude_determinado': False,
                    'advertencia': 'Se comparan DNI/RUC explícitos. Una diferencia puede deberse a un representante, pagador u OCR; no constituye prueba de fraude.'}
     return privacy, consistency
+
+
+def is_fictional(documents):
+    # RapidOCR may join the two words in the marker on scanned pages.
+    return bool(documents) and all(
+        re.search(r"\bEXPEDIENTE\s*FICTICIO\b", normalize(document.text)) for document in documents
+    )
