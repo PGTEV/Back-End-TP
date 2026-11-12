@@ -21,6 +21,7 @@ from src.infrastructure.adapters.output.gemini_drafts import GeminiDraftGenerato
 from src.application.workflow import MunicipalWorkflow
 from src.domain.privacy import LocalPrivacyFilter
 from src.infrastructure.adapters.input.municipal import build_municipal_router
+from src.infrastructure.adapters.input.metrics import RequestMetricsMiddleware
 from src.infrastructure.adapters.input.security import reviewer_dependency
 from src.infrastructure.adapters.output.academic import AcademicAdministrativeGateway, AcademicRequirementAuditor, SyntheticRoutingModel
 from src.infrastructure.adapters.output.workflow import (
@@ -62,6 +63,8 @@ def create_app(settings=None, reader=None):
                   description="Prototipo académico hexagonal. HU01 y base local HU02-HU07. Consulte /api/capacidades: no emite actos administrativos ni inventa predicciones.")
     app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins,
                        allow_methods=["GET", "POST"], allow_headers=["Content-Type", "Authorization"])
+    if settings.request_metrics_enabled:
+        app.add_middleware(RequestMetricsMiddleware)
     web_dir = Path(__file__).parent / "adapters" / "input" / "web"
     app.mount("/assets", StaticFiles(directory=web_dir / "assets"), name="assets")
     dossier_dependencies = [Depends(reviewer_dependency(settings))] if settings.protect_dossier_routes else []
