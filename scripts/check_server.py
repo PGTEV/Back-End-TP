@@ -1,4 +1,5 @@
 """Comprueba el servidor HTTP real y lo detiene al terminar."""
+import os
 import socket
 import subprocess
 import sys
@@ -18,9 +19,13 @@ def main():
         stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
     )
+    from src.infrastructure.settings import Settings
+    settings = Settings()
+    token = os.environ.get("CHECK_SERVER_TOKEN", settings.reviewer_token.get_secret_value())
+    headers = {"Authorization": "Bearer " + token} if token else {}
     base = f"http://127.0.0.1:{port}"
     try:
-        with httpx.Client(timeout=60, trust_env=False) as client:
+        with httpx.Client(timeout=60, trust_env=False, headers=headers) as client:
             for _ in range(40):
                 if process.poll() is not None:
                     raise RuntimeError(process.stderr.read().decode(errors="replace"))
@@ -32,7 +37,7 @@ def main():
                     time.sleep(0.25)
             else:
                 raise RuntimeError("El servidor no inició en 10 segundos.")
-            assert client.get(base + "/docs").status_code == 200
+            assert client.get(base + "/docs").status_code == (404 if settings.disable_api_docs else 200)
             for filename, status in (("01_expediente_digital.pdf", 201),
                                      ("02_expediente_escaneado.pdf", 201),
                                      ("03_baja_resolucion.pdf", 422),

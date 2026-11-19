@@ -14,7 +14,8 @@ class ProcessDossier:
     def _documents(self, content):
         return [classify(page) for page in self.reader.extract(content)]
 
-    def execute(self, filename: str, content: bytes, academic_owner: str | None = None) -> Dossier:
+    def execute(self, filename: str, content: bytes, academic_owner: str | None = None,
+                owner: str | None = None) -> Dossier:
         if not filename.lower().endswith(".pdf") or not content.startswith(b"%PDF-"):
             raise InvalidPDF("Debe cargar un archivo PDF válido.")
         documents = None
@@ -27,7 +28,7 @@ class ProcessDossier:
                 raise ProcessingUnavailable("No se pudo completar el procesamiento.") from error
             if not is_fictional(documents):
                 raise InvalidPDF("Marque todas las páginas con EXPEDIENTE FICTICIO para la demostración.")
-        dossier = Dossier(str(uuid4()), filename, sha256(content).hexdigest(), academic_owner=academic_owner)
+        dossier = Dossier(str(uuid4()), filename, sha256(content).hexdigest(), academic_owner=academic_owner, owner=owner)
         self.storage.save(dossier.id, content)
         try:
             self.repository.save(dossier)

@@ -2,7 +2,10 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from time import perf_counter
 import pymupdf
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
+from threading import Lock
+from time import monotonic
+import logging
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,6 +25,7 @@ from src.application.workflow import MunicipalWorkflow
 from src.domain.privacy import LocalPrivacyFilter
 from src.infrastructure.adapters.input.municipal import build_municipal_router
 from src.infrastructure.adapters.input.metrics import RequestMetricsMiddleware
+from src.infrastructure.adapters.input.hardening import SecurityMiddleware
 from src.infrastructure.adapters.input.academic_access import AcademicAccess
 from src.infrastructure.adapters.output.academic import AcademicAdministrativeGateway, AcademicRequirementAuditor, SyntheticRoutingModel
 from src.infrastructure.adapters.output.academic_indicators import SyntheticAcademicIndicators, assess_routing
@@ -34,7 +38,10 @@ from src.infrastructure.adapters.output.workflow import (
 def create_app(settings=None, reader=None):
     settings = settings or Settings()
     repository = SQLDossierRepository(settings.database_url)
-    storage = LocalFileStorage(settings.storage_dir)
+    storage = LocalFileStorage(settings.storage_dir, settings.storage_encryption_enabled,
+                               [key.get_secret_value() for key in settings.storage_encryption_keys])
+    if not settings.protect_dossier_routes:
+        logging.getLogger("uvicorn.error.security").warning("Acceso público local: PROTECT_DOSSIER_ROUTES=false.")
     reader = reader or PDFReader(settings.max_pages, settings.min_dpi, settings.min_ocr_confidence)
     catalog = JSONProcedureCatalog(Path(__file__).resolve().parents[2] / "config" / "tupa_huancayo.json")
     workflows = SQLWorkflowRepository(repository.engine)
@@ -56,8 +63,8 @@ def create_app(settings=None, reader=None):
                                  AcademicAdministrativeGateway() if settings.academic_demo else UnavailableAdministrativeGateway(),
                                  LocalPrivacyFilter(), AcademicRequirementAuditor() if settings.academic_demo else None,
                                  draft_generator, evidence_assistant,
-                                 SyntheticAcademicIndicators() if access.accounts else None,
-                                 assess_routing(routing, catalog) if access.accounts else None)
+                                 SyntheticAcademicIndicators() if access.accounts and settings.academic_demo else None,
+                                 assess_routing(routing, catalog) if access.accounts and settings.academic_demo else None)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -65,7 +72,11 @@ def create_app(settings=None, reader=None):
         repository.engine.dispose()
 
     app = FastAPI(title="Huancayo · Backend de expedientes", version="0.2.0", lifespan=lifespan,
+                  docs_url=None if settings.disable_api_docs else "/docs",
+                  redoc_url=None if settings.disable_api_docs else "/redoc",
+                  openapi_url=None if settings.disable_api_docs else "/openapi.json",
                   description="Prototipo académico hexagonal. HU01 y base local HU02-HU07. Consulte /api/capacidades: no emite actos administrativos ni inventa predicciones.")
+    app.add_middleware(SecurityMiddleware, settings=settings)
     app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins,
                        allow_methods=["GET", "POST"], allow_headers=["Content-Type", "Authorization"])
     if settings.request_metrics_enabled:
@@ -84,7 +95,9 @@ def create_app(settings=None, reader=None):
     def health():
         return {"estado": "ok"}
 
-    @app.get("/health/db", tags=["Servicio"])
+    diagnostics = [Depends(access.authenticate)] if settings.protect_diagnostics else []
+
+    @app.get("/health/db", tags=["Servicio"], dependencies=diagnostics)
     def health_db():
         start = perf_counter()
         try:
@@ -96,9 +109,21 @@ def create_app(settings=None, reader=None):
         return {"estado": "ok", "motor": repository.engine.dialect.name, "expedientes": total,
                 "latencia_ms": round((perf_counter() - start) * 1000, 1)}
 
-    @app.get("/health/ia", tags=["Servicio"])
+    cache = {}
+    cache_lock = Lock()
+
+    @app.get("/health/ia", tags=["Servicio"], dependencies=diagnostics)
     def health_ia():
         """Inferencia real del OCR (RapidOCR/PP-OCR ONNX) sobre un PDF escaneado sintético."""
+        with cache_lock:
+            if settings.protect_diagnostics and cache.get("until", 0) > monotonic():
+                return cache["result"]
+            result = run_ocr_diagnostic()
+            if settings.protect_diagnostics and isinstance(result, dict):
+                cache.update(until=monotonic() + settings.diagnostic_cache_seconds, result=result)
+            return result
+
+    def run_ocr_diagnostic():
         with pymupdf.open() as source:
             source.new_page().insert_text((45, 80), "FORMULARIO UNICO DE TRAMITE\nPRUEBA DE OCR 12345", fontsize=18)
             pix = source[0].get_pixmap(dpi=200)

@@ -153,3 +153,12 @@ Ver [las cinco historias de extracción, privacidad y auditoría](docs/PMV_CINCO
 También se admite [Gemini mediante configuración de Render](docs/GEMINI.md), conservando el mismo flujo y contrato HTTP. Seleccionar AI_PROVIDER=gemini y configurar GEMINI_API_KEY únicamente en el servidor.
 
 Ver [configuración, privacidad y demostración de GPT](docs/OPENAI.md). La generación de borradores es opcional y usa una clave exclusivamente del backend en Render.
+
+## Controles OWASP configurables (paso 7)
+
+Ver [implementación, pruebas, banderas y pendientes](docs/IMPLEMENTACION_OWASP.md).
+Para Linux/Python 3.12 hay locks con hashes separados para ejecución, pruebas y
+cifrado opcional; se conserva el lock multiplataforma para desarrollo.
+Usar `.env.production.example` para preparar el perfil de producción con acceso
+protegido, registros, límites, diagnósticos protegidos y documentación desactivada.
+No copiar el archivo sobre variables reales sin conservar la conexión/almacenamiento.
