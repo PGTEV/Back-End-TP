@@ -3,8 +3,9 @@
 from dataclasses import dataclass
 from secrets import compare_digest
 from uuid import UUID
+from datetime import datetime, timezone
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from src.infrastructure.adapters.input.security import reviewer_dependency
@@ -28,34 +29,48 @@ class AcademicAccess:
     def __init__(self, settings, dossiers, workflows, catalog):
         self.accounts = settings.academic_accounts
         self.protected = settings.protect_dossier_routes
+        self.demo = settings.academic_demo
         self.dossiers, self.workflows = dossiers, workflows
         self.responsibles = {account.department: account.id for account in self.accounts
                              if account.role == "responsable"}
         self._validate(settings, {procedure.department for procedure in catalog.list()})
         bearer = HTTPBearer(auto_error=False)
         legacy = reviewer_dependency(settings)
-        legacy_configured = len(settings.reviewer_token.get_secret_value()) >= 32 and bool(settings.reviewer_id.strip())
+        legacy_configured = (bool(settings.reviewer_tokens) or len(settings.reviewer_token.get_secret_value()) >= 32) and bool(settings.reviewer_id.strip())
 
-        def authenticate(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
+        def enforce_account_quota(request, actor_id):
+            quota = getattr(request.state, "ocr_account_quota", None)
+            if quota is not None and not quota.check(actor_id, settings.ocr_requests_per_window, consume=True):
+                raise HTTPException(429, "Límite temporal de cargas de la cuenta.",
+                                    headers={"Retry-After": str(settings.security_window_seconds)})
+
+        def authenticate(request: Request, credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
             if credentials is not None:
                 token = credentials.credentials.encode()
                 for account in self.accounts:
-                    if compare_digest(account.token.get_secret_value().encode(), token):
+                    if (compare_digest(account.token.get_secret_value().encode(), token)
+                            and (account.expires_at is None or account.expires_at > datetime.now(timezone.utc))):
+                        request.state.security_actor = account.id
+                        enforce_account_quota(request, account.id)
                         return Actor(account.id, account.role, account.department)
             if self.accounts and not legacy_configured:
                 raise HTTPException(401, "Credencial de evaluador inválida.",
                                     headers={"WWW-Authenticate": "Bearer"})
-            return Actor(legacy(credentials))
+            actor = Actor(legacy(credentials))
+            request.state.security_actor = actor.id
+            enforce_account_quota(request, actor.id)
+            return actor
 
         self.authenticate = authenticate
 
     def _validate(self, settings, departments):
         if not self.accounts:
             return
-        if not (settings.academic_demo and self.protected):
+        if not ((settings.academic_demo or settings.individual_accounts_enabled) and self.protected):
             raise ValueError("Las cuentas académicas requieren modo académico y protección de expedientes.")
         ids = {settings.reviewer_id.strip()}
         tokens = {settings.reviewer_token.get_secret_value()}
+        tokens.update(item.token.get_secret_value() for item in settings.reviewer_tokens)
         assigned_departments = set()
         for account in self.accounts:
             token = account.token.get_secret_value()
@@ -90,7 +105,7 @@ class AcademicAccess:
         return self.authenticate if self.protected else lambda: Actor("")
 
     def authorize_dossier(self, actor, record):
-        owner = record.academic_owner if record is not None else None
+        owner = (record.owner or record.academic_owner) if record is not None else None
         if actor.role is None and owner is None:
             return  # Preserve the legacy route's missing-dossier response.
         if owner is not None:

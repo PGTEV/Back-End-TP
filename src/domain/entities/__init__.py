@@ -25,3 +25,4 @@ class Dossier:
     privacy: dict = field(default_factory=dict)
     consistency: dict = field(default_factory=dict)
     academic_owner: str | None = None
+    owner: str | None = None

@@ -1,3 +1,4 @@
+from hashlib import sha256
 from src.domain.errors import DocumentNotFound, InvalidPDF, ProcessingUnavailable
 from src.domain.ports import DossierRepository, FileStorage, PDFSegmenter
 
@@ -14,6 +15,8 @@ class GetDocumentPDF:
             content = self.storage.read(dossier.id)
             if content is None:
                 raise DocumentNotFound('El PDF original no está disponible en el almacenamiento.')
+            if sha256(content).hexdigest() != dossier.sha256:
+                raise ProcessingUnavailable('La integridad del PDF original no pudo verificarse.')
             return self.segmenter.split(content, dossier.documents[index].pages)
         except (OSError, InvalidPDF) as error:
             raise ProcessingUnavailable('No se pudo recuperar el segmento del original.') from error

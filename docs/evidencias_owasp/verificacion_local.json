@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-19",
+  "baseline": {
+    "backend_passed": 166,
+    "frontend_passed": 51
+  },
+  "after": {
+    "backend_passed": 181,
+    "frontend_passed": 53,
+    "typescript": "passed",
+    "vite_build": "passed",
+    "hashed_linux_install": "passed",
+    "pip_check": "passed",
+    "font_integrity": "passed",
+    "ocr_four_fixtures_identical": true
+  },
+  "dependency_audits": {
+    "backend_known_vulnerabilities": 0,
+    "frontend_known_vulnerabilities": 0
+  },
+  "not_executed": [
+    "production deployment",
+    "GitHub Actions remote execution",
+    "provider backups/restore",
+    "real token rotation",
+    "cross-browser visual PDF/CSP checks",
+    "staging load test"
+  ],
+  "scope": "Step 7 implementation only; no final OWASP score"
+}

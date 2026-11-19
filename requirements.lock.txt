@@ -2,7 +2,7 @@
 annotated-doc==0.0.5
 annotated-types==0.8.0
 anyio==4.15.1
-certifi==2026.7.22
+certifi==2026.10.18
 click==8.5.0
 colorama==0.4.6
 fastapi==0.141.1
@@ -17,7 +17,7 @@ numpy==2.5.3
 onnxruntime==1.30.0
 opencv-python==5.0.0.93
 packaging==26.3
-pillow==12.3.0
+pillow==13.0.0
 pluggy==1.6.0
 protobuf==7.36.2
 psycopg==3.3.5
@@ -42,3 +42,7 @@ typing-inspection==0.4.4
 typing_extensions==4.16.0
 tzdata==2026.4
 uvicorn==0.53.0
+# Dependencias para las pruebas de cifrado opcional en cualquier plataforma.
+cryptography==50.0.0
+cffi==2.1.1
+pycparser==3.12

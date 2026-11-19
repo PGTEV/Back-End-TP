@@ -89,11 +89,15 @@ def build_municipal_router(service, settings, access):
                 "HU06": "FALTANTES_DOCUMENTALES; PROBABILIDAD_NO_DISPONIBLE",
                 "HU07": "ENMASCARAMIENTO_LOCAL_PARCIAL; TRANSMISION_EXTERNA_BLOQUEADA"}
         if access.accounts:
-            result["seguridad"]["roles_academicos"] = True
-            result["predicciones_academicas"] = True
+            if settings.academic_demo:
+                result["seguridad"]["roles_academicos"] = True
+                result["predicciones_academicas"] = True
+            else:
+                result["seguridad"]["cuentas_individuales"] = True
         return result
 
     if access.accounts:
+        @router.get("/sesion", tags=["Acceso"])
         @router.get("/academico/sesion", tags=["Demostración"])
         def session(response: Response, actor: Actor = Depends(reviewer)):
             response.headers["Cache-Control"] = "no-store"

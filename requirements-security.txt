@@ -1,0 +1,2 @@
+# Opcional: instalar antes de activar STORAGE_ENCRYPTION_ENABLED.
+cryptography==50.0.0

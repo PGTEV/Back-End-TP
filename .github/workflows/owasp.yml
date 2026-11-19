@@ -1,0 +1,26 @@
+name: OWASP backend checks
+on:
+  pull_request:
+  push:
+    branches: [main, codex/aplicar-plan-owasp]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - run: pip install --require-hashes -r requirements-runtime-linux.lock.txt -r requirements-security-linux.lock.txt -r requirements-test-linux.lock.txt
+      - run: pip check
+      - run: python -m pytest -q
+      - run: python scripts/scan_repository.py
+      - run: pip install pip-audit==2.10.1
+      - run: pip-audit -r requirements-runtime-linux.lock.txt -r requirements-security-linux.lock.txt --no-deps --disable-pip
+      - run: python -m scripts.build_demo_zip --output /tmp/ejemplos-demo.zip

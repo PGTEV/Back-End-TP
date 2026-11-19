@@ -29,7 +29,8 @@ def build_router(process, query, max_file_mb: int, access, document_pdf=None):
             raise HTTPException(413, detail={"codigo": "ARCHIVO_GRANDE", "mensaje": f"Máximo {max_file_mb} MB."})
         try:
             dossier = process.execute(PureWindowsPath(archivo.filename or "").name, content,
-                                      academic_owner=actor.id if actor.role else None)
+                                      academic_owner=actor.id if actor.role and access.demo else None,
+                                      owner=actor.id if actor.role and not access.demo else None)
         except IllegibleDocument as error:
             raise HTTPException(422, detail={"codigo": "DOCUMENTO_ILEGIBLE", "mensaje": error.message,
                                             "pagina": error.page, "id": error.dossier_id}) from error
